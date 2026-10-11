@@ -1,0 +1,25 @@
+{"id": "arr_total_sep26", "question": "What was total ARR at the end of September 2026?", "answer": 36161414.88, "kind": "number", "tol": 0.01, "traps": ["tcv_vs_arr", "two_revenue_streams", "invoice_double_count"]}
+{"id": "arr_ent_sep26", "question": "What was enterprise ARR at the end of September 2026?", "answer": 18720000.0, "kind": "number", "tol": 0.01, "traps": ["tcv_vs_arr"]}
+{"id": "arr_ss_sep26", "question": "What was self-serve ARR at the end of September 2026?", "answer": 17441414.88, "kind": "number", "tol": 0.01, "traps": ["two_revenue_streams"]}
+{"id": "paying_sep26", "question": "How many paying customers did we have at the end of September 2026?", "answer": 6048, "kind": "number", "tol": 0, "traps": ["stale_status", "customer_identity"]}
+{"id": "paying_ent_sep26", "question": "How many enterprise customers were paying at the end of September 2026?", "answer": 251, "kind": "number", "tol": 0, "traps": ["stale_status"]}
+{"id": "arr_q2_26", "question": "What was total ARR for Q2 2026?", "answer": 29566733.6, "kind": "number", "tol": 0.01, "traps": ["arr_summed_over_months"]}
+{"id": "arr_yoy_sep", "question": "By what percent did total ARR grow from the end of September 2025 to the end of September 2026?", "answer": 122.38, "kind": "percent", "tol": 0.5, "traps": []}
+{"id": "nnarr_q3_26", "question": "What was net new ARR in Q3 2026?", "answer": 6594681.28, "kind": "number", "tol": 0.01, "traps": []}
+{"id": "ent_churn_2026", "question": "How many enterprise customers had ARR at the end of December 2025 but have no ARR as of October 14, 2026?", "answer": 11, "kind": "number", "tol": 0, "traps": ["stale_status"]}
+{"id": "stale_active", "question": "How many Salesforce customer accounts are marked Active but have no ARR as of October 14, 2026? Exclude Lanternfly's internal account.", "answer": 10, "kind": "number", "tol": 0, "traps": ["stale_status"]}
+{"id": "ss_churn_q3", "question": "How many self-serve customers churned in Q3 2026? Do not count customers who upgraded to enterprise.", "answer": 431, "kind": "number", "tol": 0, "traps": ["upgrade_is_not_churn"]}
+{"id": "sh_traces_sep", "question": "How many base traces did self-hosted orgs ingest in September 2026?", "answer": 105151025, "kind": "number", "tol": 0.01, "traps": ["self_hosted_no_telemetry", "sf_deployment_stale"]}
+{"id": "events_sep", "question": "How many product events were recorded in September 2026, excluding internal usage?", "answer": 385206, "kind": "number", "tol": 0.01, "traps": ["internal_usage", "segment_duplicates"]}
+{"id": "traces_sep", "question": "How many base traces were ingested in September 2026, excluding internal usage?", "answer": 581781421, "kind": "number", "tol": 0.01, "traps": ["internal_usage"]}
+{"id": "plus_seats_sep30", "question": "How many billed seats did Plus customers have in total on September 30, 2026?", "answer": 20207, "kind": "number", "tol": 0.01, "traps": ["seats_are_a_balance"]}
+{"id": "ss_billed_2025", "question": "How much self-serve (Plus) revenue was invoiced for service periods in 2025?", "answer": 6445218.91, "kind": "number", "tol": 0.01, "traps": ["price_book_change"]}
+{"id": "signups_q3", "question": "How many orgs signed up in Q3 2026?", "answer": 12269, "kind": "number", "tol": 0, "traps": []}
+{"id": "activation_q2", "question": "What share of orgs that signed up in Q2 2026 have activated? Give a percent.", "answer": 49.65, "kind": "percent", "tol": 0.5, "traps": []}
+{"id": "paid_rate_2025", "question": "What percent of orgs that signed up in 2025 have become paying customers?", "answer": 11.17, "kind": "percent", "tol": 0.5, "traps": []}
+{"id": "days_to_paid_2025", "question": "For orgs that signed up in 2025 and became paying, what is the median number of days from signup to first payment?", "answer": 30.0, "kind": "number", "tol": 0.02, "traps": []}
+{"id": "ent_over_100k", "question": "How many enterprise customers had more than $100,000 of ARR at the end of September 2026?", "answer": 57, "kind": "number", "tol": 0, "traps": ["tcv_vs_arr"]}
+{"id": "avg_ent_arr", "question": "What was average ARR per enterprise customer at the end of September 2026?", "answer": 74581.67, "kind": "number", "tol": 0.01, "traps": ["tcv_vs_arr"]}
+{"id": "urgent_sep", "question": "How many urgent support tickets were created in September 2026?", "answer": 41, "kind": "number", "tol": 0, "traps": []}
+{"id": "top_region", "question": "Which region had the most total ARR at the end of September 2026? Answer NA, EMEA, APAC, or LATAM.", "answer": "NA", "kind": "category", "tol": 0.01, "traps": []}
+{"id": "upgraded_arr", "question": "How much ARR at the end of September 2026 came from enterprise customers who started on self-serve?", "answer": 5761817.32, "kind": "number", "tol": 0.01, "traps": ["customer_identity"]}

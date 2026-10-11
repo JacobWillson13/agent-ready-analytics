@@ -1,0 +1,22 @@
+models:
+  - name: stg_app__organizations
+    description: One row per product org. account_id is set only for orgs that belong to an enterprise (or internal) Salesforce account, and reflects the current link even for history before the upgrade.
+    columns:
+      - name: org_id
+        data_tests: [unique, not_null]
+      - name: deployment_type
+        description: "{{ doc('deployment_type') }}"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["cloud", "hybrid", "self_hosted"]
+      - name: country
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('country_regions')
+                field: country
+  - name: stg_app__users
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]

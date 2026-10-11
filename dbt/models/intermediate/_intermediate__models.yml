@@ -1,0 +1,69 @@
+models:
+  - name: int_months
+    description: Month spine from data_start_date to as_of_date, with each month's as-of date.
+  - name: int_org_customers
+    description: Every org mapped to its billing customer_id, region, and primary-org flag.
+    columns:
+      - name: org_id
+        data_tests: [unique, not_null]
+  - name: int_contracts
+    description: Closed-won opportunities with term length and annualized ARR.
+    columns:
+      - name: contract_id
+        data_tests: [unique, not_null]
+      - name: arr_usd
+        description: "{{ doc('arr_usd') }}"
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+  - name: int_enterprise_arr_monthly
+    description: Enterprise ARR per account per month.
+  - name: int_self_serve_arr_monthly
+    description: Self-serve ARR per customer per month.
+
+unit_tests:
+  - name: multi_year_tcv_is_annualized
+    description: Trap 1. A 3-year $360k deal is $120k ARR; an expansion is annualized over its own remaining term.
+    model: int_contracts
+    given:
+      - input: ref('stg_salesforce__opportunities')
+        rows:
+          - {opportunity_id: o1, account_id: a1, opportunity_type: New Business, is_won: true, amount_tcv_usd: 360000, contract_start_date: "2024-03-15", contract_end_date: "2027-03-14"}
+          - {opportunity_id: o2, account_id: a1, opportunity_type: Expansion, is_won: true, amount_tcv_usd: 10000, contract_start_date: "2026-11-01", contract_end_date: "2027-03-14"}
+          - {opportunity_id: o3, account_id: a2, opportunity_type: New Business, is_won: false, amount_tcv_usd: 50000, contract_start_date: "2025-01-01", contract_end_date: "2025-12-31"}
+    expect:
+      rows:
+        - {contract_id: o1, term_months: 36, arr_usd: 120000}
+        - {contract_id: o2, term_months: 4, arr_usd: 30000}
+
+  - name: self_serve_arr_uses_latest_closed_invoice_while_active
+    description: Trap 12 and the self-serve ARR definition. ARR uses the latest closed invoice, and drops to zero after the subscription ends.
+    model: int_self_serve_arr_monthly
+    given:
+      - input: ref('int_months')
+        rows:
+          - {month_start: "2026-08-01", as_of_date: "2026-08-31"}
+          - {month_start: "2026-09-01", as_of_date: "2026-09-30"}
+          - {month_start: "2026-10-01", as_of_date: "2026-10-14"}
+      - input: ref('stg_metronome__plan_subscriptions')
+        rows:
+          - {metronome_customer_id: m1, plan: plus, start_date: "2026-07-10", end_date: null}
+          - {metronome_customer_id: m2, plan: plus, start_date: "2026-07-01", end_date: "2026-09-12"}
+      - input: ref('int_org_customers')
+        rows:
+          - {metronome_customer_id: m1, customer_id: org_a, is_internal: false}
+          - {metronome_customer_id: m2, customer_id: org_b, is_internal: false}
+      - input: ref('stg_metronome__invoice_lines')
+        rows:
+          - {metronome_customer_id: m1, invoice_id: i1, plan: plus, period_end: "2026-07-31", amount_usd: 100}
+          - {metronome_customer_id: m1, invoice_id: i2, plan: plus, period_end: "2026-08-31", amount_usd: 150}
+          - {metronome_customer_id: m1, invoice_id: i3, plan: plus, period_end: "2026-09-30", amount_usd: 200}
+          - {metronome_customer_id: m2, invoice_id: i4, plan: plus, period_end: "2026-08-31", amount_usd: 80}
+    expect:
+      rows:
+        - {customer_id: org_a, month_start: "2026-08-01", self_serve_arr_usd: 1800}
+        - {customer_id: org_a, month_start: "2026-09-01", self_serve_arr_usd: 2400}
+        - {customer_id: org_a, month_start: "2026-10-01", self_serve_arr_usd: 2400}
+        - {customer_id: org_b, month_start: "2026-08-01", self_serve_arr_usd: 960}

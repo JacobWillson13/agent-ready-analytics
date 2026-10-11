@@ -1,0 +1,10 @@
+models:
+  - name: stg_segment__tracks
+    description: One row per unique product event, deduplicated on Segment message id. Incremental; rebuilds the last 3 days of partitions each run.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: org_id
+        data_tests: [not_null]
+      - name: event_date
+        description: UTC date of the event. Partition column.

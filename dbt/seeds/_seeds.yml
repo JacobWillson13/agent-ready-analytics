@@ -1,0 +1,11 @@
+seeds:
+  - name: country_regions
+    description: Maps ISO country codes to sales regions. The single place region is defined.
+    columns:
+      - name: country
+        data_tests: [unique, not_null]
+      - name: region
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["NA", "EMEA", "APAC", "LATAM"]

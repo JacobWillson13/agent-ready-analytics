@@ -1,0 +1,36 @@
+models:
+  - name: stg_metronome__customers
+    description: One Metronome billing customer per product org.
+    columns:
+      - name: metronome_customer_id
+        data_tests: [unique, not_null]
+      - name: org_id
+        data_tests: [unique, not_null]
+  - name: stg_metronome__plan_subscriptions
+    description: Plan history per org. Plans are developer (free), plus, enterprise, enterprise_sandbox, internal. end_date null means active.
+    columns:
+      - name: subscription_id
+        data_tests: [unique, not_null]
+      - name: plan
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["developer", "plus", "enterprise", "enterprise_sandbox", "internal"]
+  - name: stg_metronome__usage
+    description: One row per org, metric, and day with nonzero usage.
+    columns:
+      - name: usage_id
+        data_tests: [unique, not_null]
+      - name: billable_metric
+        description: base_traces and extended_traces are daily flows (sum across days). seats is a daily balance (never sum across days).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["base_traces", "extended_traces", "seats"]
+  - name: stg_metronome__invoice_lines
+    description: One row per invoice line. Plus invoices are monthly in arrears. Enterprise platform_commit invoices are annual prepayments of Salesforce contracts; adding them to Salesforce ARR double counts.
+    columns:
+      - name: invoice_line_id
+        data_tests: [unique, not_null]
+  - name: stg_metronome__price_book
+    description: Plus list prices with effective dates. Overage price dropped on 2025-07-01. Historical revenue must come from invoices, never from today's prices.

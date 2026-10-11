@@ -1,0 +1,59 @@
+sources:
+  - name: salesforce
+    schema: raw_salesforce
+    description: Salesforce CRM export. Soft-deleted rows have is_deleted = true. Holds enterprise accounts, prospects, and contracts only; self-serve customers never appear here.
+    tables:
+      - name: account
+      - name: opportunity
+      - name: user
+
+  - name: app
+    schema: raw_app
+    description: Replica of the product database. Current state only (no history).
+    tables:
+      - name: organizations
+      - name: users
+
+  - name: segment
+    schema: raw_segment
+    description: Segment track calls from the hosted UI. Delivered at least once, so raw rows contain duplicates. Self-hosted orgs send nothing; hybrid orgs send partial telemetry.
+    tables:
+      - name: tracks
+        config:
+          loaded_at_field: received_at
+          freshness:
+            warn_after: {count: 2, period: day}
+
+  - name: metronome
+    schema: raw_metronome
+    description: Usage metering, plans, and invoices. Covers every org, including free and self-hosted.
+    tables:
+      - name: customers
+      - name: plan_subscriptions
+      - name: usage
+      - name: invoices
+      - name: price_book
+
+  - name: support
+    schema: raw_support
+    tables:
+      - name: tickets
+
+  - name: pypi
+    schema: raw_pypi
+    description: REAL daily PyPI downloads for the upstream LangChain packages, pulled from the BigQuery public PyPI dataset by ingest/pypi_downloads.py. Used as a top-of-funnel proxy.
+    tables:
+      - name: daily_downloads
+
+  - name: github
+    schema: raw_github
+    description: REAL GitHub releases for the upstream LangChain repos, loaded by the dlt pipeline in ingest/github_releases.py.
+    tables:
+      - name: releases
+
+  - name: eval_truth
+    schema: eval_truth
+    description: Generator answer key. Read only by reconciliation tests and the eval harness. The agent's credentials cannot read this dataset.
+    tables:
+      - name: truth_arr_monthly
+      - name: truth_org_daily

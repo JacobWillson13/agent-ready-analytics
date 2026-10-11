@@ -1,0 +1,36 @@
+models:
+  - name: stg_salesforce__accounts
+    description: One row per non-deleted Salesforce account. Enterprise customers, prospects, and the internal account.
+    columns:
+      - name: account_id
+        data_tests: [unique, not_null]
+      - name: account_status
+        description: "{{ doc('account_status') }}"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Active", "Churned", "Prospect"]
+      - name: sf_deployment_type
+        description: Deployment type entered by Sales at contract time; not maintained afterward.
+  - name: stg_salesforce__opportunities
+    description: One row per non-deleted opportunity. Closed-won opportunities are contracts; see int_contracts.
+    columns:
+      - name: opportunity_id
+        data_tests: [unique, not_null]
+      - name: account_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_salesforce__accounts')
+                field: account_id
+      - name: opportunity_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["New Business", "Expansion", "Renewal"]
+      - name: amount_tcv_usd
+        description: Total contract value over the full term. Not annualized. Never use directly as ARR.
+  - name: stg_salesforce__users
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]

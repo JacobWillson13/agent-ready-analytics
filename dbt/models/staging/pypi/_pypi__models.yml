@@ -1,0 +1,12 @@
+models:
+  - name: stg_pypi__downloads
+    description: Real daily PyPI downloads per upstream package. Includes CI and mirror traffic, so treat as an adoption trend, not a user count.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [project, download_date]
+  - name: stg_github__releases
+    description: Real releases of the upstream LangChain repos.
+    columns:
+      - name: release_id
+        data_tests: [unique, not_null]
