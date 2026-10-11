@@ -1,7 +1,7 @@
 [project]
 name = "agent-ready-analytics"
 version = "0.2.0"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.14"
 dependencies = [
   # warehouse + modeling
   "dbt-core>=1.12,<1.13",
