@@ -9,7 +9,8 @@ AS_OF = "2026-10-14"
 
 
 def build_agent(level: str = "full", model: str = MODEL):
-    llm = init_chat_model(model, temperature=0, max_tokens=4096)
+    # Newer Claude models reject non-default temperature; eval variance is handled with repetitions instead.
+    llm = init_chat_model(model, max_tokens=4096)
     return create_agent(llm, build_tools(level), system_prompt=system_prompt(level, AS_OF),
                         name=f"agent-ready-analytics-{level}")
 
