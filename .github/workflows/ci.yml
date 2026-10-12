@@ -1,6 +1,7 @@
 # On every PR: build and test dbt (including reconciliation against the answer key).
 # If the PR touches context (docs, guides, semantic YAML, agent prompts), also run the
 # full-context eval in LangSmith and post the accuracy change as a PR comment.
+# Jobs skip cleanly (instead of failing) when the repo secrets are not configured.
 name: ci
 on:
   pull_request:
@@ -11,39 +12,50 @@ permissions:
 
 jobs:
   dbt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+      HAS_SECRETS: ${{ secrets.GCP_CI_SA_KEY != '' }}
     steps:
+      - name: secrets check
+        if: env.HAS_SECRETS != 'true'
+        run: echo "::notice::GCP secrets not configured; skipping dbt build."
       - uses: actions/checkout@v4
+        if: env.HAS_SECRETS == 'true'
       - uses: astral-sh/setup-uv@v5
+        if: env.HAS_SECRETS == 'true'
       - uses: google-github-actions/auth@v2
+        if: env.HAS_SECRETS == 'true'
         with:
           credentials_json: ${{ secrets.GCP_CI_SA_KEY }}
-      - name: profiles
-        run: |
-          mkdir -p ~/.dbt
-          sed "s/YOUR_GCP_PROJECT/$GCP_PROJECT/" dbt/profiles.yml.example > ~/.dbt/profiles.yml
       - name: dbt build
-        working-directory: dbt
+        if: env.HAS_SECRETS == 'true'
         run: |
+          mkdir -p ~/.dbt && cp dbt/profiles.yml.example ~/.dbt/profiles.yml
+          cd dbt
           uv run dbt deps
           uv run dbt build --fail-fast
           uv run mf validate-configs
 
   context-eval:
     needs: dbt
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
       LANGSMITH_TRACING: "true"
       LANGSMITH_PROJECT: agent-ready-analytics-ci
+      HAS_SECRETS: ${{ secrets.GCP_AGENT_SA_KEY != '' && secrets.ANTHROPIC_API_KEY != '' && secrets.LANGSMITH_API_KEY != '' }}
     steps:
+      - name: secrets check
+        if: env.HAS_SECRETS != 'true'
+        run: echo "::notice::Agent secrets not configured; skipping context eval."
       - uses: actions/checkout@v4
+        if: env.HAS_SECRETS == 'true'
         with: {fetch-depth: 0}
       - uses: dorny/paths-filter@v3
+        if: env.HAS_SECRETS == 'true'
         id: changes
         with:
           filters: |
@@ -52,21 +64,20 @@ jobs:
               - 'dbt/models/docs/**'
               - 'guides/**'
               - 'agent/**'
-      - if: steps.changes.outputs.context == 'true'
+      - if: env.HAS_SECRETS == 'true' && steps.changes.outputs.context == 'true'
         uses: astral-sh/setup-uv@v5
-      - if: steps.changes.outputs.context == 'true'
+      - if: env.HAS_SECRETS == 'true' && steps.changes.outputs.context == 'true'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_AGENT_SA_KEY }}   # agent SA: no access to eval_truth
-      - if: steps.changes.outputs.context == 'true'
+      - if: env.HAS_SECRETS == 'true' && steps.changes.outputs.context == 'true'
         name: run eval
         run: |
-          mkdir -p ~/.dbt
-          sed "s/YOUR_GCP_PROJECT/$GCP_PROJECT/" dbt/profiles.yml.example > ~/.dbt/profiles.yml
+          mkdir -p ~/.dbt && cp dbt/profiles.yml.example ~/.dbt/profiles.yml
           (cd dbt && uv run dbt deps && uv run dbt parse)
           uv run python evals/run_evals.py --levels full --out evals/results/pr.json
           uv run python evals/compare.py --baseline evals/baseline.json --current evals/results/pr.json --out comment.md
-      - if: always() && steps.changes.outputs.context == 'true'
+      - if: always() && env.HAS_SECRETS == 'true' && steps.changes.outputs.context == 'true'
         uses: actions/github-script@v7
         with:
           script: |
