@@ -14,7 +14,8 @@ REPOS = ["langchain-ai/langchain", "langchain-ai/langgraph", "langchain-ai/deepa
 
 
 @dlt.resource(name="releases", write_disposition="merge", primary_key="id")
-def releases(max_pages: int = 30):
+def releases(max_pages: int = 10):
+    # GitHub list endpoints stop at 1,000 results (10 pages of 100) and return 422 past that.
     headers = {"Accept": "application/vnd.github+json"}
     if os.getenv("GITHUB_TOKEN"):
         headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
@@ -22,6 +23,8 @@ def releases(max_pages: int = 30):
         url = f"https://api.github.com/repos/{repo}/releases?per_page=100"
         for _ in range(max_pages):
             r = requests.get(url, headers=headers, timeout=30)
+            if r.status_code == 422:      # pagination limit reached; keep what we have
+                break
             r.raise_for_status()
             for rel in r.json():
                 yield {"id": rel["id"], "repo": repo, "tag_name": rel["tag_name"], "name": rel["name"],
@@ -34,7 +37,7 @@ def releases(max_pages: int = 30):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--duckdb", action="store_true")
-    ap.add_argument("--max-pages", type=int, default=30)
+    ap.add_argument("--max-pages", type=int, default=10)
     a = ap.parse_args()
     pipe = dlt.pipeline(pipeline_name="github_releases",
                         destination="duckdb" if a.duckdb else "bigquery",

@@ -9,6 +9,7 @@ dependencies = [
   "dbt-metricflow[dbt-bigquery]>=0.15",
   "protobuf>=6,<7",              # dbt-adapters requires <7; newer google libs try to pull 7
   "google-cloud-bigquery>=3.25",
+  "google-cloud-bigquery-storage",   # fast result downloads for the agent and mf
   "db-dtypes",
   # ingestion
   "dlt[bigquery]>=1.5",
