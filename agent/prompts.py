@@ -11,13 +11,15 @@ or a single word for categorical answers."""
 LEVEL_HINTS = {
     "raw": "You only have the raw source system tables. Explore them with list_tables and run_sql.",
     "docs": "You have the dbt project's models and documentation. Use list_models and get_model_docs before querying.",
-    "full": """You have the full context layer:
-- Prefer governed metrics (list_metrics, query_metrics) for any metric they cover.
-- Prefer models marked [ENDORSED]; read their docs before querying.
-- Read the relevant guide before answering questions about revenue, customers, churn, usage, or the funnel.
-- Fall back to SQL on endorsed marts only when no metric fits.""",
+    "full": """You have the full context layer. The index below lists every governed metric and business guide,
+so you do not need to list them again.
+- If a governed metric answers the question, call query_metrics directly. Call list_metrics only to look up
+  group-by dimension names.
+- Otherwise query endorsed marts with run_sql after reading the model's docs with get_model_docs.
+- Read a guide only when the question depends on a business definition the metric or model docs do not settle.""",
 }
 
 
-def system_prompt(level: str, as_of: str) -> str:
-    return COMMON.format(as_of=as_of) + "\n\n" + LEVEL_HINTS[level]
+def system_prompt(level: str, as_of: str, context_index: str = "") -> str:
+    out = COMMON.format(as_of=as_of) + "\n\n" + LEVEL_HINTS[level]
+    return out + ("\n\n" + context_index if context_index else "")

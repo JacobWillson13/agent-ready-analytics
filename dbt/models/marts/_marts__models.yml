@@ -224,12 +224,14 @@ models:
         non_additive_dimension: {name: month_start, window_agg: max}
       - name: enterprise_arr
         label: Enterprise ARR
+        description: ARR from live Salesforce contracts at the end of the period, annualized from total contract value.
         type: simple
         agg: sum
         expr: enterprise_arr_usd
         non_additive_dimension: {name: month_start, window_agg: max}
       - name: self_serve_arr
         label: Self-serve ARR
+        description: ARR from active Plus subscriptions at the end of the period (12 x latest closed monthly invoice).
         type: simple
         agg: sum
         expr: self_serve_arr_usd
@@ -298,11 +300,13 @@ models:
     metrics:
       - name: base_traces
         label: Base traces
+        description: Metered traces. The only usage measure comparable across cloud, hybrid, and self-hosted.
         type: simple
         agg: sum
         expr: base_traces
       - name: extended_traces
         label: Extended traces
+        description: Traces upgraded to extended retention.
         type: simple
         agg: sum
         expr: extended_traces
