@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+      DBT_PROFILES_DIR: /home/runner/.dbt   # MetricFlow does not find ~/.dbt on its own
       HAS_SECRETS: ${{ secrets.GCP_CI_SA_KEY != '' }}
     steps:
       - name: secrets check
@@ -42,6 +43,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+      DBT_PROFILES_DIR: /home/runner/.dbt   # MetricFlow does not find ~/.dbt on its own
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
       LANGSMITH_TRACING: "true"
