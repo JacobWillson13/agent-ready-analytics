@@ -20,8 +20,9 @@ from evals.scoring import score  # noqa: E402
 HERE = Path(__file__).parent
 
 
-def golden() -> list[dict]:
-    return [json.loads(l) for l in (HERE / "golden.jsonl").read_text().splitlines() if l.strip()]
+def golden(split: str = "core") -> list[dict]:
+    qs = [json.loads(l) for l in (HERE / "golden.jsonl").read_text().splitlines() if l.strip()]
+    return qs if split == "all" else [q for q in qs if q.get("split", "core") == split]
 
 
 def ensure_dataset(client: Client, qs: list[dict]) -> str:
@@ -46,16 +47,17 @@ def main():
     ap.add_argument("--levels", nargs="+", default=["raw", "docs", "full"])
     ap.add_argument("--repetitions", type=int, default=1)
     ap.add_argument("--concurrency", type=int, default=4)
+    ap.add_argument("--split", choices=["core", "holdout", "all"], default="core")
     ap.add_argument("--out", type=Path, default=HERE / "results" / "latest.json")
     a = ap.parse_args()
     client = Client()
-    qs = golden()
+    qs = golden(a.split)
     dataset = ensure_dataset(client, qs)
     summary = {}
     for level in a.levels:
         res = evaluate(lambda inputs, lvl=level: {"answer": ask(inputs["question"], lvl)},
-                       data=dataset, evaluators=[correct], experiment_prefix=f"context-{level}",
-                       metadata={"context_level": level}, num_repetitions=a.repetitions,
+                       data=dataset, evaluators=[correct], experiment_prefix=f"context-{level}" + ("" if a.split == "core" else f"-{a.split}"),
+                       metadata={"context_level": level, "split": a.split}, num_repetitions=a.repetitions,
                        max_concurrency=a.concurrency, client=client)
         by_q, by_trap = defaultdict(list), defaultdict(list)
         for row in res:

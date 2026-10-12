@@ -1,0 +1,48 @@
+{
+  "full": {
+    "accuracy": 1.0,
+    "experiment": "context-full-fc49e77c",
+    "per_question": {
+      "arr_total_sep26": 1.0,
+      "activation_q2": 1.0,
+      "ss_churn_q3": 1.0,
+      "arr_q2_26": 1.0,
+      "urgent_sep": 1.0,
+      "paid_rate_2025": 1.0,
+      "paying_sep26": 1.0,
+      "stale_active": 1.0,
+      "arr_ss_sep26": 1.0,
+      "ent_over_100k": 1.0,
+      "days_to_paid_2025": 1.0,
+      "paying_ent_sep26": 1.0,
+      "ss_billed_2025": 1.0,
+      "upgraded_arr": 1.0,
+      "avg_ent_arr": 1.0,
+      "nnarr_q3_26": 1.0,
+      "events_sep": 1.0,
+      "traces_sep": 1.0,
+      "arr_ent_sep26": 1.0,
+      "ent_churn_2026": 1.0,
+      "sh_traces_sep": 1.0,
+      "arr_yoy_sep": 1.0,
+      "top_region": 1.0,
+      "signups_q3": 1.0,
+      "plus_seats_sep30": 1.0
+    },
+    "per_trap": {
+      "tcv_vs_arr": 1.0,
+      "two_revenue_streams": 1.0,
+      "invoice_double_count": 1.0,
+      "upgrade_is_not_churn": 1.0,
+      "arr_summed_over_months": 1.0,
+      "stale_status": 1.0,
+      "customer_identity": 1.0,
+      "price_book_change": 1.0,
+      "internal_usage": 1.0,
+      "segment_duplicates": 1.0,
+      "self_hosted_no_telemetry": 1.0,
+      "sf_deployment_stale": 1.0,
+      "seats_are_a_balance": 1.0
+    }
+  }
+}

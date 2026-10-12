@@ -25,8 +25,8 @@ def build(data: Path):
     arr, daily, orgs, cust, r = load(data)
     q = []
 
-    def add(qid, question, answer, kind="number", tol=0.01, traps=()):
-        q.append(dict(id=qid, question=question, answer=answer, kind=kind, tol=tol, traps=list(traps)))
+    def add(qid, question, answer, kind="number", tol=0.01, traps=(), split="core"):
+        q.append(dict(id=qid, question=question, answer=answer, kind=kind, tol=tol, traps=list(traps), split=split))
 
     m = lambda d: arr[arr.month_start == pd.Timestamp(d)]
     sep, jun, sep25 = m("2026-09-01"), m("2026-06-01"), m("2025-09-01")
@@ -98,6 +98,30 @@ def build(data: Path):
     up = set(cust[cust.upgraded_from_self_serve].customer_id)
     add("upgraded_arr", "How much ARR at the end of September 2026 came from enterprise customers who started on self-serve?",
         round(sep[sep.customer_id.isin(up)].arr_usd.sum(), 2), traps=["customer_identity"])
+
+    # ---- holdout: written after the guides, same rules, new wording. Never used for tuning. ----
+    H = "holdout"
+    region = cust.drop_duplicates("customer_id").set_index("customer_id")["region"]
+    mar26 = m("2026-03-01")
+    add("h_emea_arr_mar26", "What was ARR at the end of March 2026 for customers in EMEA?",
+        round(mar26[mar26.customer_id.map(region) == "EMEA"].arr_usd.sum(), 2),
+        traps=["two_revenue_streams", "tcv_vs_arr"], split=H)
+    add("h_arr_change_ytd", "How much did ARR grow between December 31, 2025 and September 30, 2026?",
+        round(sep.arr_usd.sum() - m("2025-12-01").arr_usd.sum(), 2),
+        traps=["two_revenue_streams", "arr_summed_over_months"], split=H)
+    add("h_ss_share", "What percent of ARR at the end of September 2026 came from the self-serve business?",
+        round(100 * sep[sep.motion == "self_serve"].arr_usd.sum() / sep.arr_usd.sum(), 2), kind="percent", tol=0.5,
+        traps=["two_revenue_streams", "invoice_double_count"], split=H)
+    add("h_h1_arr", "What was our ARR for the first half of 2026?", round(jun.arr_usd.sum(), 2),
+        traps=["arr_summed_over_months"], split=H)
+    sep25_c = set(sep25.customer_id)
+    add("h_logo_churn", "Of the customers paying at the end of September 2025, how many were no longer paying as of "
+        "October 14, 2026? A customer that moved from self-serve to enterprise counts as retained.",
+        len(sep25_c - now), tol=0, traps=["upgrade_is_not_churn", "customer_identity"], split=H)
+    d9d = d9.assign(dep=d9.org_id.map(dep))
+    add("h_top_deployment", "Which deployment type ingested the most base traces in September 2026, excluding "
+        "internal usage? Answer cloud, hybrid, or self_hosted.",
+        d9d.groupby("dep").traces.sum().idxmax(), kind="category", traps=["sf_deployment_stale"], split=H)
     return q
 
 
