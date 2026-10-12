@@ -113,9 +113,9 @@ def build_tools(level: str) -> list:
 
     @tool
     def list_metrics() -> str:
-        """List governed metrics and the group-by dimensions MetricFlow accepts."""
-        ms = "\n".join(f"- {m['name']} ({m['type']}): {m['description']}" for m in catalog.metrics())
-        return f"Metrics:\n{ms}\n\nDimensions:\n" + ", ".join(catalog.dimensions())
+        """List governed metrics (with type) and the group-by dimension names MetricFlow accepts."""
+        ms = ", ".join(f"{m['name']} ({m['type']})" for m in catalog.metrics())
+        return f"Metrics: {ms}\n\nDimensions: " + ", ".join(catalog.dimensions())
     tools.append(list_metrics)
 
     @tool
