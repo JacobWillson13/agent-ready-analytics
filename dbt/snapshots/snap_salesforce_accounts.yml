@@ -1,0 +1,10 @@
+snapshots:
+  - name: snap_salesforce_accounts
+    description: SCD2 history of how Sales labeled each account. Answers "what did Sales believe on date X". Each dbt snapshot run captures changes since the last run.
+    relation: source('salesforce', 'account')
+    config:
+      schema: snapshots
+      unique_key: id
+      strategy: check
+      check_cols: [account_status__c, deployment_type__c, owner_id]
+      hard_deletes: invalidate

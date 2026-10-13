@@ -1,0 +1,7 @@
+# Endorsed models, metric definitions, docs, and guides are the context layer.
+# Changes need data-team review, and CI re-runs the eval when they change.
+/dbt/models/marts/     @YOUR_GITHUB_HANDLE
+/dbt/models/docs/      @YOUR_GITHUB_HANDLE
+/guides/               @YOUR_GITHUB_HANDLE
+/agent/prompts.py      @YOUR_GITHUB_HANDLE
+/evals/                @YOUR_GITHUB_HANDLE

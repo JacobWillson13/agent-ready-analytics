@@ -1,0 +1,46 @@
+name: lanternfly_analytics
+version: "2.0.0"
+profile: lanternfly_analytics
+require-dbt-version: [">=1.12.0", "<1.13.0"]
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+vars:
+  # Freeze "now". Every as-of calculation reads this instead of current_date(),
+  # so answers are reproducible and match the eval answer key.
+  as_of_date: "2026-10-14"
+  data_start_date: "2024-01-01"
+
+seeds:
+  lanternfly_analytics:
+    +schema: seeds
+
+models:
+  lanternfly_analytics:
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +materialized: view
+      +schema: staging
+      +meta: {endorsed: false, layer: staging}
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+      +meta: {endorsed: false, layer: intermediate}
+    marts:
+      +materialized: table
+      +schema: marts
+      +meta: {layer: marts}
+    utilities:
+      +materialized: table
+      +schema: utilities
+
+data_tests:
+  lanternfly_analytics:
+    reconciliation:
+      +tags: [reconciliation]

@@ -1,0 +1,28 @@
+[project]
+name = "agent-ready-analytics"
+version = "0.2.0"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  # warehouse + modeling
+  "dbt-core>=1.12,<1.13",
+  "dbt-bigquery>=1.12,<1.13",
+  "dbt-metricflow[dbt-bigquery]>=0.15",
+  "protobuf>=6,<7",              # dbt-adapters requires <7; newer google libs try to pull 7
+  "google-cloud-bigquery>=3.25",
+  "google-cloud-bigquery-storage",   # fast result downloads for the agent and mf
+  "db-dtypes",
+  # ingestion
+  "dlt[bigquery]>=1.5",
+  "requests",
+  # generator
+  "numpy>=2.5,<2.6",           # pinned: RNG output can shift between numpy releases
+  "pandas>=2.2",
+  "pyarrow>=16",
+  "faker>=30",
+  # agent + evals
+  "langchain>=1.4",
+  "langchain-anthropic",
+  "langgraph",
+  "langsmith>=0.14",
+  "mcp>=2",
+]

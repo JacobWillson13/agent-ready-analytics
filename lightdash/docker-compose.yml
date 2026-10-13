@@ -1,0 +1,36 @@
+# Self-hosted Lightdash for the Customer 360 dashboard. Run from the repo root:
+#   docker compose -f lightdash/docker-compose.yml up -d    then open http://localhost:8080
+# Based on Lightdash's self-host compose; check their docs if an env var has been renamed.
+services:
+  db:
+    image: postgres:15.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lightdash
+      POSTGRES_PASSWORD: ${LD_PG_PASSWORD:-lightdash}
+      POSTGRES_DB: lightdash
+    volumes:
+      - lightdash_pg:/var/lib/postgresql/data
+
+  lightdash:
+    image: lightdash/lightdash:latest
+    restart: unless-stopped
+    depends_on: [db]
+    ports: ["8080:8080"]
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: lightdash
+      PGPASSWORD: ${LD_PG_PASSWORD:-lightdash}
+      PGDATABASE: lightdash
+      LIGHTDASH_SECRET: ${LIGHTDASH_SECRET:?set LIGHTDASH_SECRET to a long random string}
+      SITE_URL: http://localhost:8080
+      SECURE_COOKIES: "false"
+      TRUST_PROXY: "false"
+      PORT: 8080
+      DBT_PROJECT_DIR: /usr/app/dbt
+    volumes:
+      - ../dbt:/usr/app/dbt:ro
+
+volumes:
+  lightdash_pg:

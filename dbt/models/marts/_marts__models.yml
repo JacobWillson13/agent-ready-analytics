@@ -1,0 +1,409 @@
+# Endorsed, contract-enforced, agent-facing models. Semantic annotations live next to
+# each column (dbt 1.12 Semantic Layer spec), so definitions and context sit together.
+
+models:
+  # ------------------------------------------------------------------ dim_orgs
+  - name: dim_orgs
+    description: >
+      Grain: one row per product org, including free, internal, and sandbox orgs. Holds
+      org attributes and the self-serve funnel (signup, activation, first paid). Use for
+      signup, activation, and conversion questions. Activation means the org's cumulative
+      base traces reached 1,000. Exclude is_internal for any customer-facing count.
+      Revenue does not live here; see fct_arr_monthly.
+    config:
+      contract: {enforced: true}
+      meta: {endorsed: true, owner: data-team}
+    semantic_model:
+      enabled: true
+    agg_time_dimension: signup_date
+    columns:
+      - name: org_id
+        data_type: string
+        description: "{{ doc('org_id') }}"
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+        entity: {name: org, type: primary}
+      - name: customer_id
+        data_type: string
+        description: "{{ doc('customer_id') }}"
+        entity: {name: customer, type: foreign}
+      - name: account_id
+        data_type: string
+        description: Salesforce account for enterprise and internal orgs; null for free and self-serve orgs.
+      - name: org_name
+        data_type: string
+      - name: deployment_type
+        data_type: string
+        description: "{{ doc('deployment_type') }}"
+        dimension: {type: categorical}
+      - name: country
+        data_type: string
+      - name: region
+        data_type: string
+        description: Sales region from the country_regions seed (NA, EMEA, APAC, LATAM).
+        dimension: {type: categorical}
+      - name: is_internal
+        data_type: boolean
+        description: "{{ doc('is_internal') }}"
+        dimension: {type: categorical}
+      - name: is_primary_org
+        data_type: boolean
+        description: False for secondary orgs (usually sandboxes) of an enterprise account.
+      - name: current_plan
+        data_type: string
+        description: Plan active on as_of_date. developer (free), plus, enterprise, enterprise_sandbox, internal, or churned (no active plan).
+        dimension: {type: categorical}
+      - name: signup_date
+        data_type: date
+        description: Date the org was created. Funnel cohort date.
+        granularity: day
+        dimension: {type: time}
+      - name: activated_date
+        data_type: date
+        description: First date cumulative base traces reached 1,000. Null if never activated.
+      - name: first_paid_date
+        data_type: date
+        description: Start of the org's first plus or enterprise subscription. Null if never paid. Sandboxes never count as paid.
+      - name: first_paid_plan
+        data_type: string
+        description: plus for self-serve conversions; enterprise for sales-led orgs.
+        dimension: {type: categorical}
+      - name: days_to_activate
+        data_type: int64
+      - name: days_to_paid
+        data_type: int64
+      - name: is_activated
+        data_type: boolean
+      - name: is_paid_ever
+        data_type: boolean
+    metrics:
+      - name: signups
+        label: Signups
+        description: Orgs created, by signup date. Excludes internal orgs.
+        type: simple
+        agg: count_distinct
+        expr: org_id
+        filter: "{{ Dimension('org__is_internal') }} = false"
+      - name: activated_signups
+        label: Activated signups
+        description: Signups that ever activated, attributed to signup date.
+        type: simple
+        agg: sum
+        expr: "case when is_activated and not is_internal then 1 else 0 end"
+      - name: paid_signups
+        label: Paid signups
+        description: Signups that ever became paying (plus or enterprise), attributed to signup date.
+        type: simple
+        agg: sum
+        expr: "case when is_paid_ever and not is_internal then 1 else 0 end"
+
+  # ------------------------------------------------------------- dim_customers
+  - name: dim_customers
+    description: >
+      Grain: one row per billing customer that has ever paid. Enterprise customers are
+      Salesforce accounts; self-serve customers are orgs. Excludes internal. Holds
+      attributes only (region, motion, deployment, owner). For who is paying now, use
+      fct_arr_monthly for the month in question, never account_status.
+    config:
+      contract: {enforced: true}
+      meta: {endorsed: true, owner: data-team}
+    semantic_model:
+      enabled: true
+    agg_time_dimension: first_paid_date
+    columns:
+      - name: customer_id
+        data_type: string
+        description: "{{ doc('customer_id') }}"
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+        entity: {name: customer, type: primary}
+      - name: customer_name
+        data_type: string
+      - name: motion
+        data_type: string
+        description: "{{ doc('motion') }} This is the customer's motion today; fct_arr_monthly.motion gives it per month."
+        dimension: {type: categorical}
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["enterprise", "self_serve"]
+      - name: region
+        data_type: string
+        description: Sales region of the customer's primary org.
+        dimension: {type: categorical}
+      - name: country
+        data_type: string
+      - name: deployment_type
+        data_type: string
+        description: "{{ doc('deployment_type') }}"
+        dimension: {type: categorical}
+      - name: sf_deployment_type
+        data_type: string
+        description: Salesforce's deployment field, set at contract time and often stale. Reconciliation only; use deployment_type.
+      - name: industry
+        data_type: string
+        dimension: {type: categorical}
+      - name: employee_count
+        data_type: int64
+      - name: account_status
+        data_type: string
+        description: "{{ doc('account_status') }}"
+        dimension: {type: categorical}
+      - name: owner_name
+        data_type: string
+        dimension: {type: categorical}
+      - name: first_paid_date
+        data_type: date
+        description: First day the customer paid in either motion. Cohort date for retention.
+        granularity: day
+        dimension: {type: time}
+      - name: first_contract_date
+        data_type: date
+        description: First enterprise contract start. Null for self-serve.
+      - name: upgraded_from_self_serve
+        data_type: boolean
+        description: Enterprise customer that started on Plus. Its Plus subscription ending was an upgrade, not churn.
+        dimension: {type: categorical}
+
+  # ------------------------------------------------------------ fct_arr_monthly
+  - name: fct_arr_monthly
+    description: >
+      Grain: one row per customer per month with ARR above zero on the month's as-of date.
+      The source of truth for ARR, paying customer counts, churn, and expansion, across
+      both motions. A customer with no row in a month had zero ARR. ARR is a balance:
+      never sum across months. Do not add Metronome enterprise invoices to this; they are
+      prepayments of the same contracts.
+    config:
+      contract: {enforced: true}
+      meta: {endorsed: true, owner: data-team}
+    semantic_model:
+      enabled: true
+    agg_time_dimension: month_start
+    columns:
+      - name: customer_month_id
+        data_type: string
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+        entity: {name: customer_month, type: primary}
+      - name: customer_id
+        data_type: string
+        description: "{{ doc('customer_id') }}"
+        entity: {name: customer, type: foreign}
+      - name: month_start
+        data_type: date
+        granularity: month
+        dimension: {type: time}
+      - name: as_of_date
+        data_type: date
+        description: "{{ doc('as_of_date') }}"
+      - name: motion
+        data_type: string
+        description: Motion in this month. An upgraded customer is self_serve before the upgrade and enterprise after.
+        dimension: {type: categorical}
+      - name: enterprise_arr_usd
+        data_type: float64
+        description: Annualized value of live Salesforce contracts on as_of_date.
+      - name: self_serve_arr_usd
+        data_type: float64
+        description: 12 times the latest closed Plus invoice, while Plus is active.
+      - name: arr_usd
+        data_type: float64
+        description: "{{ doc('arr_usd') }}"
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+    metrics:
+      - name: arr
+        label: ARR
+        description: Total ARR at the end of the period, both motions. The canonical ARR metric.
+        type: simple
+        agg: sum
+        expr: arr_usd
+        non_additive_dimension: {name: month_start, window_agg: max}
+      - name: enterprise_arr
+        label: Enterprise ARR
+        description: ARR from live Salesforce contracts at the end of the period, annualized from total contract value.
+        type: simple
+        agg: sum
+        expr: enterprise_arr_usd
+        non_additive_dimension: {name: month_start, window_agg: max}
+      - name: self_serve_arr
+        label: Self-serve ARR
+        description: ARR from active Plus subscriptions at the end of the period (12 x latest closed monthly invoice).
+        type: simple
+        agg: sum
+        expr: self_serve_arr_usd
+        non_additive_dimension: {name: month_start, window_agg: max}
+      - name: paying_customers
+        label: Paying customers
+        description: Customers with ARR above zero at the end of the period. The canonical customer count; never count account_status = 'Active'.
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+        non_additive_dimension: {name: month_start, window_agg: max}
+
+  # ------------------------------------------------------------ fct_daily_usage
+  - name: fct_daily_usage
+    description: >
+      Grain: one row per org per UTC day with any metered usage or product events,
+      through as_of_date. Internal orgs excluded. Missing days mean zero. base_traces is
+      the only measure comparable across deployment types; product_events and
+      active_users are 0 for self-hosted and partial for hybrid.
+    config:
+      contract: {enforced: true}
+      meta: {endorsed: true, owner: data-team}
+    semantic_model:
+      enabled: true
+    agg_time_dimension: usage_date
+    columns:
+      - name: org_day_id
+        data_type: string
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+        entity: {name: org_day, type: primary}
+      - name: org_id
+        data_type: string
+        description: "{{ doc('org_id') }}"
+        entity: {name: org, type: foreign}
+      - name: customer_id
+        data_type: string
+        description: "{{ doc('customer_id') }}"
+      - name: usage_date
+        data_type: date
+        granularity: day
+        dimension: {type: time}
+      - name: plan_on_day
+        data_type: string
+        description: The org's plan on that day (developer, plus, enterprise, enterprise_sandbox, or none).
+        dimension: {type: categorical}
+      - name: deployment_type
+        data_type: string
+        description: "{{ doc('deployment_type') }} Current value, applied to all history."
+        dimension: {type: categorical}
+      - name: base_traces
+        data_type: int64
+        description: Traces metered that day. Covers every deployment type. Additive.
+      - name: extended_traces
+        data_type: int64
+        description: Traces upgraded to extended retention that day. Additive.
+      - name: billed_seats
+        data_type: int64
+        description: Seat balance that day. Never sum across days; take one day.
+      - name: product_events
+        data_type: int64
+        description: Deduplicated Segment events. 0 for self-hosted, partial for hybrid.
+      - name: active_users
+        data_type: int64
+        description: Distinct users with an event that day. Never sum across days.
+    metrics:
+      - name: base_traces
+        label: Base traces
+        description: Metered traces. The only usage measure comparable across cloud, hybrid, and self-hosted.
+        type: simple
+        agg: sum
+        expr: base_traces
+      - name: extended_traces
+        label: Extended traces
+        description: Traces upgraded to extended retention.
+        type: simple
+        agg: sum
+        expr: extended_traces
+      - name: product_events
+        label: Product events
+        description: UI events. Not comparable across deployment types.
+        type: simple
+        agg: sum
+        expr: product_events
+      - name: active_orgs
+        label: Active orgs
+        description: Orgs with any usage in the period.
+        type: simple
+        agg: count_distinct
+        expr: org_id
+      - name: billed_seats
+        label: Billed seats
+        description: Seat balance at the end of the period.
+        type: simple
+        agg: sum
+        expr: billed_seats
+        non_additive_dimension: {name: usage_date, window_agg: max}
+
+  # --------------------------------------------------------------- fct_invoices
+  - name: fct_invoices
+    description: >
+      Grain: one row per Metronome invoice. Use for billed revenue questions (what was
+      invoiced in a period). Plus invoices are monthly in arrears; enterprise
+      platform_commit invoices are annual prepayments. Never use invoices for ARR, and
+      never recompute past revenue from today's price book.
+    config:
+      contract: {enforced: true}
+      meta: {endorsed: true, owner: data-team}
+    columns:
+      - name: invoice_id
+        data_type: string
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - {name: customer_id, data_type: string, description: "{{ doc('customer_id') }}"}
+      - {name: org_id, data_type: string}
+      - {name: plan, data_type: string, description: "plus or enterprise"}
+      - {name: period_start, data_type: date}
+      - {name: period_end, data_type: date}
+      - {name: issued_date, data_type: date}
+      - {name: amount_usd, data_type: float64}
+
+  # -------------------------------------------------------- fct_support_tickets
+  - name: fct_support_tickets
+    description: "Grain: one row per support ticket from a non-internal org."
+    config:
+      contract: {enforced: true}
+      meta: {endorsed: true, owner: data-team}
+    columns:
+      - name: ticket_id
+        data_type: string
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - {name: customer_id, data_type: string, description: "{{ doc('customer_id') }}"}
+      - {name: org_id, data_type: string}
+      - {name: current_plan, data_type: string, description: "Org's plan today, not at ticket time."}
+      - {name: priority, data_type: string}
+      - {name: status, data_type: string}
+      - {name: category, data_type: string}
+      - {name: created_at, data_type: timestamp}
+      - {name: created_date, data_type: date}
+      - {name: solved_at, data_type: timestamp}
+      - {name: hours_to_resolution, data_type: float64}
+
+  # --------------------------------------------------- fct_pypi_downloads_daily
+  - name: fct_pypi_downloads_daily
+    description: >
+      Grain: one row per upstream package per day. REAL PyPI download counts for
+      langchain, langgraph, deepagents, and langsmith, used as a top-of-funnel adoption
+      proxy. Includes CI and mirror traffic; not a user count.
+    config:
+      contract: {enforced: true}
+      meta: {endorsed: true, owner: data-team}
+    columns:
+      - name: project_day_id
+        data_type: string
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - {name: project, data_type: string}
+      - {name: download_date, data_type: date}
+      - {name: downloads, data_type: int64}
+
+# Ratio metrics span two simple metrics on dim_orgs.
+metrics:
+  - name: activation_rate
+    label: Activation rate
+    description: Share of non-internal signups that activated, by signup cohort.
+    type: ratio
+    numerator: activated_signups
+    denominator: signups
+  - name: signup_to_paid_rate
+    label: Signup to paid rate
+    description: Share of non-internal signups that ever paid, by signup cohort.
+    type: ratio
+    numerator: paid_signups
+    denominator: signups

@@ -1,0 +1,10 @@
+models:
+  - name: stg_support__tickets
+    columns:
+      - name: ticket_id
+        data_tests: [unique, not_null]
+      - name: priority
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["low", "normal", "high", "urgent"]
