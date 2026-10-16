@@ -166,7 +166,7 @@ def main():
     ap.add_argument("--concurrency", type=int, default=4, help="parallel executions for API models")
     ap.add_argument("--local-concurrency", type=int, default=1, help="parallel executions for local models")
     ap.add_argument("--timeout", type=float, default=900, help="wall-clock seconds per execution")
-    ap.add_argument("--recursion-limit", type=int, default=40)
+    ap.add_argument("--recursion-limit", type=int, default=60, help="LangGraph steps; about half are tool calls")
     ap.add_argument("--cost-cap", type=float, default=8.0, help="USD per API model, across the whole run id")
     ap.add_argument("--seed", type=int, default=20261016)
     a = ap.parse_args()
