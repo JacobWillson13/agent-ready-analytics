@@ -47,7 +47,7 @@ bench-pilot:         ## Haiku, full context, hard split, 1 rep: ceiling check an
 
 bench:               ## full run; resumable. Run the two models in separate terminals to overlap them.
 	uv run python evals/benchmark.py --run-id $(RUN) --models $(HAIKU) --repetitions 3 --cost-cap 8
-	uv run python evals/benchmark.py --run-id $(RUN) --models $(GEMMA) --repetitions 2
+	uv run python evals/benchmark.py --run-id $(RUN) --models $(GEMMA) --repetitions 3
 
 analyze:             ## tables, mixed-effects model, and figures for a run
 	uv run python evals/analyze.py evals/results/$(RUN) --figures docs/figures

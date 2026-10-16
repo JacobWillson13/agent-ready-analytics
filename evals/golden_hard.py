@@ -110,9 +110,13 @@ def build_hard(data, arr, daily, orgs, cust, r, add):
     add("x_traces_mom", "By what percent did base traces grow from August 2026 to September 2026, excluding internal "
         "usage?", round(100 * (sep_d.traces.sum() / aug_d.traces.sum() - 1), 2), kind="percent", tol=0.5,
         traps=["internal_usage"], split=H)
-    add("x_sh_trace_share", "What percent of base traces ingested in September 2026 came from self-hosted orgs, "
-        "excluding internal usage?", round(100 * sep_d[sep_d.deployment == "self_hosted"].traces.sum()
-                                         / sep_d.traces.sum(), 2), kind="percent", tol=0.5,
+    # Deployment is the org's current deployment, as documented on dim_orgs and fct_daily_usage (same convention
+    # as sh_traces_sep). The answer key's per-day deployment differs for orgs that migrated mid-month.
+    dep_now = orgs.set_index("org_id").deployment_now
+    sh = sep_d.org_id.astype(str).map(dep_now) == "self_hosted"
+    add("x_sh_trace_share", "What percent of base traces ingested in September 2026 came from orgs that are "
+        "self-hosted today, excluding internal usage?", round(100 * sep_d[sh].traces.sum() / sep_d.traces.sum(), 2),
+        kind="percent", tol=0.2,
         traps=["self_hosted_no_telemetry", "sf_deployment_stale", "internal_usage"], split=H)
     q3 = d[(d.date >= "2026-07-01") & (d.date <= "2026-09-30")]
     sandbox = set(orgs[orgs.is_sandbox].org_id)
