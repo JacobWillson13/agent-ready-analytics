@@ -22,7 +22,11 @@ dependencies = [
   # agent + evals
   "langchain>=1.4",
   "langchain-anthropic",
+  "langchain-ollama",
   "langgraph",
   "langsmith>=0.14",
   "mcp>=2",
+  # benchmark analysis
+  "statsmodels>=0.14",
+  "matplotlib>=3.9",
 ]

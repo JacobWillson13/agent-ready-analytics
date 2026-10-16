@@ -8,6 +8,11 @@ from pathlib import Path
 
 import pandas as pd
 
+try:
+    from evals.golden_hard import build_hard
+except ImportError:  # run as a script from the repo root
+    from golden_hard import build_hard
+
 AS_OF = pd.Timestamp("2026-10-14")
 
 
@@ -25,7 +30,11 @@ def build(data: Path):
     arr, daily, orgs, cust, r = load(data)
     q = []
 
-    def add(qid, question, answer, kind="number", tol=0.01, traps=(), split="core"):
+    def add(qid, question, answer, kind="number", tol=0.01, traps=(), split="core", margin=None):
+        # margin: for "which is largest" questions, the relative gap to the runner-up. A near tie would make
+        # the answer fragile, so the build fails instead of writing it.
+        if margin is not None and margin < 0.02:
+            raise ValueError(f"{qid}: winner beats runner-up by only {margin:.1%}; rewrite the question")
         q.append(dict(id=qid, question=question, answer=answer, kind=kind, tol=tol, traps=list(traps), split=split))
 
     m = lambda d: arr[arr.month_start == pd.Timestamp(d)]
@@ -122,6 +131,9 @@ def build(data: Path):
     add("h_top_deployment", "Which deployment type ingested the most base traces in September 2026, excluding "
         "internal usage? Answer cloud, hybrid, or self_hosted.",
         d9d.groupby("dep").traces.sum().idxmax(), kind="category", traps=["sf_deployment_stale"], split=H)
+
+    # ---- hard: Phase 2 benchmark questions (evals/golden_hard.py) ----
+    build_hard(data, arr, daily, orgs, cust, r, add)
     return q
 
 

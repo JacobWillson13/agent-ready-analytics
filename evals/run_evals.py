@@ -15,6 +15,7 @@ from langsmith import Client, evaluate
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from agent.graph import ask  # noqa: E402
+from agent.settings import MODEL  # noqa: E402
 from evals.scoring import score  # noqa: E402
 
 HERE = Path(__file__).parent
@@ -45,6 +46,7 @@ def correct(outputs: dict, reference_outputs: dict) -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--levels", nargs="+", default=["raw", "docs", "full"])
+    ap.add_argument("--model", default=MODEL)
     ap.add_argument("--repetitions", type=int, default=1)
     ap.add_argument("--concurrency", type=int, default=4)
     ap.add_argument("--split", choices=["core", "holdout", "all"], default="core")
@@ -55,9 +57,9 @@ def main():
     dataset = ensure_dataset(client, qs)
     summary = {}
     for level in a.levels:
-        res = evaluate(lambda inputs, lvl=level: {"answer": ask(inputs["question"], lvl)},
+        res = evaluate(lambda inputs, lvl=level: {"answer": ask(inputs["question"], lvl, a.model)},
                        data=dataset, evaluators=[correct], experiment_prefix=f"context-{level}" + ("" if a.split == "core" else f"-{a.split}"),
-                       metadata={"context_level": level, "split": a.split}, num_repetitions=a.repetitions,
+                       metadata={"context_level": level, "split": a.split, "model": a.model}, num_repetitions=a.repetitions,
                        max_concurrency=a.concurrency, client=client)
         by_q, by_trap = defaultdict(list), defaultdict(list)
         for row in res:

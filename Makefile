@@ -2,7 +2,7 @@
 SCALE ?= 1.0
 DATA  ?= data
 
-.PHONY: generate load ingest build recon golden evals evals-full agent lightdash all
+.PHONY: generate load ingest build recon golden evals evals-full agent lightdash all bench-smoke bench-pilot bench analyze
 
 generate:            ## synthetic company, through the recording date
 	uv run python -m generator --scale $(SCALE) --out $(DATA)
@@ -32,6 +32,24 @@ baseline:            ## save the current full-context run as the CI baseline
 
 agent:               ## make agent Q="What was total ARR at the end of September 2026?"
 	uv run python -m agent "$(Q)"
+
+# ---- Phase 2 benchmark: model x context (evals/benchmark.py, evals/analyze.py) ----
+HAIKU ?= anthropic:claude-haiku-5-5
+GEMMA ?= ollama:gemma4:26b
+RUN   ?= phase2
+
+bench-smoke:         ## 3 questions x 3 levels per model: checks keys, tool calling, and BigQuery access
+	uv run python evals/benchmark.py --run-id smoke --models $(HAIKU) $(GEMMA) --qids arr_total_sep26 x_nrr_sep x_sh_trace_share
+
+bench-pilot:         ## Haiku, full context, hard split, 1 rep: ceiling check and answer-key audit (about $0.10)
+	uv run python evals/benchmark.py --run-id pilot --models $(HAIKU) --levels full --splits hard
+
+bench:               ## full run; resumable. Run the two models in separate terminals to overlap them.
+	uv run python evals/benchmark.py --run-id $(RUN) --models $(HAIKU) --repetitions 3 --cost-cap 8
+	uv run python evals/benchmark.py --run-id $(RUN) --models $(GEMMA) --repetitions 2
+
+analyze:             ## tables, mixed-effects model, and figures for a run
+	uv run python evals/analyze.py evals/results/$(RUN) --figures docs/figures
 
 lightdash:
 	docker compose -f lightdash/docker-compose.yml up -d
