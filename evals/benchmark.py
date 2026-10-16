@@ -104,6 +104,31 @@ def write_manifest(out_dir: Path, args, questions: list[dict]):
     path.write_text(json.dumps(man, indent=2))
 
 
+def preflight(models: list[str]):
+    """Stop before any execution if credentials or services are missing, so a bad environment cannot
+    write a run full of failures. The env file uses shell exports: `source ~/.config/ara/env` first."""
+    import os
+    problems = []
+    if not os.getenv("GCP_PROJECT"):
+        problems.append("GCP_PROJECT is not set")
+    if any(provider(m) == "anthropic" for m in models) and not os.getenv("ANTHROPIC_API_KEY"):
+        problems.append("ANTHROPIC_API_KEY is not set")
+    if os.getenv("LANGSMITH_TRACING", "").lower() == "true" and not os.getenv("LANGSMITH_API_KEY"):
+        problems.append("LANGSMITH_TRACING is true but LANGSMITH_API_KEY is not set")
+    if any(provider(m) in LOCAL_PROVIDERS for m in models):
+        import requests
+        try:
+            names = [t["name"] for t in requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5).json()["models"]]
+            for m in models:
+                if provider(m) in LOCAL_PROVIDERS and m.split(":", 1)[1] not in names:
+                    problems.append(f"Ollama does not have {m.split(':', 1)[1]}; run: ollama pull {m.split(':', 1)[1]}")
+        except Exception as e:
+            problems.append(f"Ollama is not reachable at {OLLAMA_BASE_URL}: {e}")
+    if problems:
+        sys.exit("Preflight failed, nothing was run:\n  - " + "\n  - ".join(problems)
+                 + "\nLoad your environment with: source ~/.config/ara/env")
+
+
 def execute(task: dict, args) -> dict:
     q, model, level, rep = task["q"], task["model"], task["level"], task["rep"]
     row = dict(run_id=args.run_id, model=model, level=level, qid=q["id"], split=q.get("split", "core"), rep=rep,
@@ -146,6 +171,7 @@ def main():
     ap.add_argument("--seed", type=int, default=20261016)
     a = ap.parse_args()
 
+    preflight(a.models)
     questions = load_questions(a.splits)
     if a.qids:
         questions = [q for q in questions if q["id"] in set(a.qids)]
