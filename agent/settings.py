@@ -15,6 +15,10 @@ MAX_ROWS = 200
 OLLAMA_BASE_URL = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_NUM_CTX = int(os.getenv("ARA_OLLAMA_NUM_CTX", "32768"))
 REQUEST_TIMEOUT_S = float(os.getenv("ARA_REQUEST_TIMEOUT_S", "300"))
+# Thinking mode for local models: "off" (default) matches the API model, which runs without extended
+# thinking; thinking tokens also count against the output cap. "on" keeps reasoning out of the message history.
+OLLAMA_THINK = os.getenv("ARA_OLLAMA_THINK", "off").lower()
+OLLAMA_MAX_TOKENS = int(os.getenv("ARA_OLLAMA_MAX_TOKENS", "8192"))
 
 
 def _as_of() -> str:

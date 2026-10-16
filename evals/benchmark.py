@@ -36,7 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from agent.graph import run  # noqa: E402
 from agent.providers import LOCAL_PROVIDERS, provider  # noqa: E402
-from agent.settings import AS_OF, LEVELS, OLLAMA_BASE_URL, OLLAMA_NUM_CTX  # noqa: E402
+from agent.settings import AS_OF, LEVELS, OLLAMA_BASE_URL, OLLAMA_MAX_TOKENS, OLLAMA_NUM_CTX, OLLAMA_THINK  # noqa: E402
 from evals.scoring import extract, score  # noqa: E402
 
 HERE = Path(__file__).parent
@@ -64,7 +64,8 @@ def git_sha() -> str:
 def ollama_info(model: str) -> dict:
     import requests
     name = model.split(":", 1)[1]
-    info = {"ollama_host": OLLAMA_BASE_URL, "num_ctx": OLLAMA_NUM_CTX}
+    info = {"ollama_host": OLLAMA_BASE_URL, "num_ctx": OLLAMA_NUM_CTX, "think": OLLAMA_THINK,
+            "max_output_tokens": OLLAMA_MAX_TOKENS, "temperature": 0, "seed": 42}
     try:
         info["ollama_version"] = requests.get(f"{OLLAMA_BASE_URL}/api/version", timeout=10).json().get("version")
         show = requests.post(f"{OLLAMA_BASE_URL}/api/show", json={"model": name}, timeout=30).json()
@@ -116,6 +117,9 @@ def execute(task: dict, args) -> dict:
         row.update(res, status="ok" if extract(res["answer"]) is not None else "no_final_answer",
                    final_answer=extract(res["answer"]), correct=int(ok), reason=why)
         row["answer_tail"] = res["answer"][-500:]
+        # Ollama silently drops the oldest context past num_ctx; flag runs that came close.
+        row["context_near_limit"] = int(provider(model) in LOCAL_PROVIDERS
+                                        and res["max_prompt_tokens"] >= 0.95 * OLLAMA_NUM_CTX)
         del row["answer"]
     except Exception as e:
         name = type(e).__name__

@@ -4,7 +4,7 @@ Model strings use "provider:model", e.g. "anthropic:claude-haiku-5-5" or "ollama
 """
 from __future__ import annotations
 
-from .settings import OLLAMA_BASE_URL, OLLAMA_NUM_CTX, REQUEST_TIMEOUT_S
+from .settings import OLLAMA_BASE_URL, OLLAMA_MAX_TOKENS, OLLAMA_NUM_CTX, OLLAMA_THINK, REQUEST_TIMEOUT_S
 
 # USD per million tokens: input, output, cache read, cache write (5 min).
 # Anthropic charges a higher tier on every line when a single request's prompt exceeds the threshold.
@@ -23,8 +23,10 @@ def make_llm(model: str, max_tokens: int = 4096):
     if prov == "ollama":
         from langchain_ollama import ChatOllama
         # temperature 0 and a fixed seed for local models; num_ctx must be explicit (Ollama defaults to 4k).
-        return ChatOllama(model=name, base_url=OLLAMA_BASE_URL, num_ctx=OLLAMA_NUM_CTX, num_predict=max_tokens,
-                          temperature=0, seed=42, client_kwargs={"timeout": REQUEST_TIMEOUT_S})
+        # reasoning=False turns thinking off; True keeps it in additional_kwargs instead of the message text.
+        return ChatOllama(model=name, base_url=OLLAMA_BASE_URL, num_ctx=OLLAMA_NUM_CTX, num_predict=OLLAMA_MAX_TOKENS,
+                          temperature=0, seed=42, reasoning=OLLAMA_THINK == "on",
+                          client_kwargs={"timeout": REQUEST_TIMEOUT_S})
     from langchain.chat_models import init_chat_model
     # Newer Claude models reject non-default temperature; variance is handled with repetitions instead.
     return init_chat_model(model, max_tokens=max_tokens, timeout=REQUEST_TIMEOUT_S, max_retries=4)

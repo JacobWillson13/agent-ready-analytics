@@ -39,6 +39,7 @@ GEMMA ?= ollama:gemma4:26b
 RUN   ?= phase2
 
 bench-smoke:         ## 3 questions x 3 levels per model: checks keys, tool calling, and BigQuery access
+	rm -rf evals/results/smoke
 	uv run python evals/benchmark.py --run-id smoke --models $(HAIKU) $(GEMMA) --qids arr_total_sep26 x_nrr_sep x_sh_trace_share
 
 bench-pilot:         ## Haiku, full context, hard split, 1 rep: ceiling check and answer-key audit (about $0.10)
