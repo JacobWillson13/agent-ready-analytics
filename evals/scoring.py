@@ -25,7 +25,7 @@ def score(answer_text: str, expected, kind: str, tol: float) -> tuple[bool, str]
     if val is None:
         return False, f"unparseable {got!r}"
     exp = float(expected)
-    if kind == "percent":
+    if kind in ("percent", "abs"):  # absolute tolerance (percentage points, or units for small ratios)
         ok = abs(val - exp) <= tol
     elif tol == 0:
         ok = round(val) == round(exp)

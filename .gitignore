@@ -4,6 +4,7 @@ __pycache__/
 dbt/target/
 dbt/dbt_packages/
 dbt/logs/
-evals/results/
+evals/results/*
+!evals/results/phase2/
 *.duckdb
 .env
