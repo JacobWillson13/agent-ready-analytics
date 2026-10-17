@@ -1,0 +1,119 @@
+{
+  "run_id": "phase2",
+  "models": {
+    "anthropic:claude-haiku-5-5": {
+      "provider": "anthropic",
+      "model": "anthropic:claude-haiku-5-5"
+    },
+    "ollama:gemma4:26b": {
+      "provider": "ollama",
+      "model": "ollama:gemma4:26b",
+      "ollama_host": "http://localhost:11434",
+      "num_ctx": 32768,
+      "think": "off",
+      "max_output_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "ollama_version": "0.34.0",
+      "quantization": "Q4_K_M",
+      "parameter_size": "25.2B",
+      "family": "gemma4",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "vision",
+        "tools",
+        "thinking"
+      ],
+      "digest": "001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c"
+    }
+  },
+  "invocations": [
+    {
+      "started_at": "2026-10-16T16:19:06.117921+00:00",
+      "argv": [
+        "--run-id",
+        "phase2",
+        "--models",
+        "anthropic:claude-haiku-5-5",
+        "--repetitions",
+        "3",
+        "--cost-cap",
+        "10"
+      ],
+      "git_sha": "a3b28919b615d526d328b88b7104d2713a5fc568",
+      "as_of": "2026-10-14",
+      "golden_sha256": "0cb1c6725ab9f96b504c1b84c0eaaa4d305629d3cc3de55f10a99f6aeef9026e",
+      "n_questions": 64,
+      "splits": [
+        "core",
+        "holdout",
+        "hard"
+      ],
+      "levels": [
+        "raw",
+        "docs",
+        "full"
+      ],
+      "repetitions": 3,
+      "seed": 20261016,
+      "timeout_s": 900,
+      "recursion_limit": 60,
+      "packages": {
+        "langchain": "1.4.4",
+        "langchain-core": "1.6.9",
+        "langchain-anthropic": "1.7.5",
+        "langchain-ollama": "1.1.0",
+        "langgraph": "1.2.14",
+        "langsmith": "0.14.7",
+        "dbt-core": "1.12.5",
+        "dbt-metricflow": "0.15.0",
+        "google-cloud-bigquery": "3.46.1"
+      },
+      "host": "corsair",
+      "python": "3.12.14"
+    },
+    {
+      "started_at": "2026-10-16T16:19:28.601514+00:00",
+      "argv": [
+        "--run-id",
+        "phase2",
+        "--models",
+        "ollama:gemma4:26b",
+        "--repetitions",
+        "3"
+      ],
+      "git_sha": "a3b28919b615d526d328b88b7104d2713a5fc568-dirty",
+      "as_of": "2026-10-14",
+      "golden_sha256": "0cb1c6725ab9f96b504c1b84c0eaaa4d305629d3cc3de55f10a99f6aeef9026e",
+      "n_questions": 64,
+      "splits": [
+        "core",
+        "holdout",
+        "hard"
+      ],
+      "levels": [
+        "raw",
+        "docs",
+        "full"
+      ],
+      "repetitions": 3,
+      "seed": 20261016,
+      "timeout_s": 900,
+      "recursion_limit": 60,
+      "packages": {
+        "langchain": "1.4.4",
+        "langchain-core": "1.6.9",
+        "langchain-anthropic": "1.7.5",
+        "langchain-ollama": "1.1.0",
+        "langgraph": "1.2.14",
+        "langsmith": "0.14.7",
+        "dbt-core": "1.12.5",
+        "dbt-metricflow": "0.15.0",
+        "google-cloud-bigquery": "3.46.1"
+      },
+      "host": "corsair",
+      "python": "3.12.14"
+    }
+  ]
+}
