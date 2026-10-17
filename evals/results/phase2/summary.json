@@ -1,0 +1,509 @@
+{
+  "accuracy": [
+    {
+      "group": "all",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "raw",
+      "n_questions": 64,
+      "n_runs": 192,
+      "accuracy": 65.625,
+      "ci_low": 56.25,
+      "ci_high": 75.0
+    },
+    {
+      "group": "all",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "docs",
+      "n_questions": 64,
+      "n_runs": 192,
+      "accuracy": 99.47916666666667,
+      "ci_low": 98.4375,
+      "ci_high": 100.0
+    },
+    {
+      "group": "all",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "full",
+      "n_questions": 64,
+      "n_runs": 192,
+      "accuracy": 93.75,
+      "ci_low": 88.0078125,
+      "ci_high": 98.4375
+    },
+    {
+      "group": "all",
+      "model": "ollama:gemma4:26b",
+      "level": "raw",
+      "n_questions": 64,
+      "n_runs": 192,
+      "accuracy": 22.916666666666664,
+      "ci_low": 13.528645833333334,
+      "ci_high": 33.333333333333336
+    },
+    {
+      "group": "all",
+      "model": "ollama:gemma4:26b",
+      "level": "docs",
+      "n_questions": 64,
+      "n_runs": 192,
+      "accuracy": 68.22916666666667,
+      "ci_low": 57.8125,
+      "ci_high": 78.125
+    },
+    {
+      "group": "all",
+      "model": "ollama:gemma4:26b",
+      "level": "full",
+      "n_questions": 64,
+      "n_runs": 192,
+      "accuracy": 83.33333333333334,
+      "ci_low": 75.0,
+      "ci_high": 91.66666666666666
+    },
+    {
+      "group": "original",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "raw",
+      "n_questions": 31,
+      "n_runs": 93,
+      "accuracy": 72.04301075268816,
+      "ci_low": 59.13978494623655,
+      "ci_high": 83.87096774193549
+    },
+    {
+      "group": "original",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "docs",
+      "n_questions": 31,
+      "n_runs": 93,
+      "accuracy": 100.0,
+      "ci_low": 100.0,
+      "ci_high": 100.0
+    },
+    {
+      "group": "original",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "full",
+      "n_questions": 31,
+      "n_runs": 93,
+      "accuracy": 93.54838709677419,
+      "ci_low": 83.87096774193549,
+      "ci_high": 100.0
+    },
+    {
+      "group": "original",
+      "model": "ollama:gemma4:26b",
+      "level": "raw",
+      "n_questions": 31,
+      "n_runs": 93,
+      "accuracy": 26.881720430107524,
+      "ci_low": 12.903225806451612,
+      "ci_high": 41.962365591397706
+    },
+    {
+      "group": "original",
+      "model": "ollama:gemma4:26b",
+      "level": "docs",
+      "n_questions": 31,
+      "n_runs": 93,
+      "accuracy": 80.64516129032258,
+      "ci_low": 67.74193548387095,
+      "ci_high": 92.47311827956989
+    },
+    {
+      "group": "original",
+      "model": "ollama:gemma4:26b",
+      "level": "full",
+      "n_questions": 31,
+      "n_runs": 93,
+      "accuracy": 88.17204301075269,
+      "ci_low": 77.41935483870967,
+      "ci_high": 96.77419354838712
+    },
+    {
+      "group": "hard",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "raw",
+      "n_questions": 33,
+      "n_runs": 99,
+      "accuracy": 59.59595959595959,
+      "ci_low": 45.45454545454545,
+      "ci_high": 73.73737373737373
+    },
+    {
+      "group": "hard",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "docs",
+      "n_questions": 33,
+      "n_runs": 99,
+      "accuracy": 98.98989898989899,
+      "ci_low": 96.96969696969697,
+      "ci_high": 100.0
+    },
+    {
+      "group": "hard",
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "full",
+      "n_questions": 33,
+      "n_runs": 99,
+      "accuracy": 93.93939393939394,
+      "ci_low": 85.85858585858585,
+      "ci_high": 100.0
+    },
+    {
+      "group": "hard",
+      "model": "ollama:gemma4:26b",
+      "level": "raw",
+      "n_questions": 33,
+      "n_runs": 99,
+      "accuracy": 19.19191919191919,
+      "ci_low": 7.070707070707072,
+      "ci_high": 32.323232323232325
+    },
+    {
+      "group": "hard",
+      "model": "ollama:gemma4:26b",
+      "level": "docs",
+      "n_questions": 33,
+      "n_runs": 99,
+      "accuracy": 56.56565656565656,
+      "ci_low": 42.42424242424242,
+      "ci_high": 69.6969696969697
+    },
+    {
+      "group": "hard",
+      "model": "ollama:gemma4:26b",
+      "level": "full",
+      "n_questions": 33,
+      "n_runs": 99,
+      "accuracy": 78.78787878787878,
+      "ci_low": 65.65656565656565,
+      "ci_high": 90.9090909090909
+    }
+  ],
+  "contrasts": [
+    {
+      "group": "all",
+      "contrast": "docs - raw",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": 33.85416666666667,
+      "ci_low": 25.0,
+      "ci_high": 43.75000000000001,
+      "n": 64
+    },
+    {
+      "group": "all",
+      "contrast": "full - raw",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": 28.125,
+      "ci_low": 17.187500000000004,
+      "ci_high": 39.583333333333336,
+      "n": 64
+    },
+    {
+      "group": "all",
+      "contrast": "full - docs",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": -5.729166666666667,
+      "ci_low": -11.979166666666668,
+      "ci_high": -0.5208333333333333,
+      "n": 64
+    },
+    {
+      "group": "all",
+      "contrast": "docs - raw",
+      "model": "ollama:gemma4:26b",
+      "diff": 45.3125,
+      "ci_low": 32.8125,
+      "ci_high": 57.29166666666667,
+      "n": 64
+    },
+    {
+      "group": "all",
+      "contrast": "full - raw",
+      "model": "ollama:gemma4:26b",
+      "diff": 60.416666666666664,
+      "ci_low": 48.43749999999999,
+      "ci_high": 71.35416666666667,
+      "n": 64
+    },
+    {
+      "group": "all",
+      "contrast": "full - docs",
+      "model": "ollama:gemma4:26b",
+      "diff": 15.104166666666668,
+      "ci_low": 4.6875,
+      "ci_high": 25.520833333333336,
+      "n": 64
+    },
+    {
+      "group": "all",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "raw",
+      "diff": -42.70833333333333,
+      "ci_low": -52.604166666666664,
+      "ci_high": -32.8125,
+      "n": 64
+    },
+    {
+      "group": "all",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "docs",
+      "diff": -31.25,
+      "ci_low": -41.15885416666667,
+      "ci_high": -22.382812500000068,
+      "n": 64
+    },
+    {
+      "group": "all",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "full",
+      "diff": -10.416666666666668,
+      "ci_low": -18.229166666666668,
+      "ci_high": -2.604166666666667,
+      "n": 64
+    },
+    {
+      "group": "original",
+      "contrast": "docs - raw",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": 27.95698924731183,
+      "ci_low": 16.129032258064516,
+      "ci_high": 40.86021505376344,
+      "n": 31
+    },
+    {
+      "group": "original",
+      "contrast": "full - raw",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": 21.50537634408602,
+      "ci_low": 5.376344086021508,
+      "ci_high": 37.63440860215054,
+      "n": 31
+    },
+    {
+      "group": "original",
+      "contrast": "full - docs",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": -6.451612903225806,
+      "ci_low": -16.129032258064516,
+      "ci_high": 0.0,
+      "n": 31
+    },
+    {
+      "group": "original",
+      "contrast": "docs - raw",
+      "model": "ollama:gemma4:26b",
+      "diff": 53.76344086021507,
+      "ci_low": 33.33333333333333,
+      "ci_high": 70.96774193548387,
+      "n": 31
+    },
+    {
+      "group": "original",
+      "contrast": "full - raw",
+      "model": "ollama:gemma4:26b",
+      "diff": 61.29032258064516,
+      "ci_low": 45.134408602150536,
+      "ci_high": 77.41935483870968,
+      "n": 31
+    },
+    {
+      "group": "original",
+      "contrast": "full - docs",
+      "model": "ollama:gemma4:26b",
+      "diff": 7.526881720430108,
+      "ci_low": -5.376344086021505,
+      "ci_high": 20.43010752688172,
+      "n": 31
+    },
+    {
+      "group": "original",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "raw",
+      "diff": -45.16129032258064,
+      "ci_low": -60.21505376344085,
+      "ci_high": -31.182795698924732,
+      "n": 31
+    },
+    {
+      "group": "original",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "docs",
+      "diff": -19.35483870967742,
+      "ci_low": -32.25806451612903,
+      "ci_high": -7.526881720430108,
+      "n": 31
+    },
+    {
+      "group": "original",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "full",
+      "diff": -5.376344086021506,
+      "ci_low": -17.204301075268816,
+      "ci_high": 5.376344086021505,
+      "n": 31
+    },
+    {
+      "group": "hard",
+      "contrast": "docs - raw",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": 39.3939393939394,
+      "ci_low": 26.262626262626267,
+      "ci_high": 53.535353535353536,
+      "n": 33
+    },
+    {
+      "group": "hard",
+      "contrast": "full - raw",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": 34.34343434343434,
+      "ci_low": 20.17676767676768,
+      "ci_high": 49.4949494949495,
+      "n": 33
+    },
+    {
+      "group": "hard",
+      "contrast": "full - docs",
+      "model": "anthropic:claude-haiku-5-5",
+      "diff": -5.05050505050505,
+      "ci_low": -14.141414141414144,
+      "ci_high": 1.0101010101010102,
+      "n": 33
+    },
+    {
+      "group": "hard",
+      "contrast": "docs - raw",
+      "model": "ollama:gemma4:26b",
+      "diff": 37.37373737373737,
+      "ci_low": 23.23232323232323,
+      "ci_high": 52.52525252525252,
+      "n": 33
+    },
+    {
+      "group": "hard",
+      "contrast": "full - raw",
+      "model": "ollama:gemma4:26b",
+      "diff": 59.5959595959596,
+      "ci_low": 41.41414141414142,
+      "ci_high": 75.75757575757575,
+      "n": 33
+    },
+    {
+      "group": "hard",
+      "contrast": "full - docs",
+      "model": "ollama:gemma4:26b",
+      "diff": 22.222222222222225,
+      "ci_low": 7.07070707070707,
+      "ci_high": 38.38383838383838,
+      "n": 33
+    },
+    {
+      "group": "hard",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "raw",
+      "diff": -40.4040404040404,
+      "ci_low": -53.535353535353536,
+      "ci_high": -27.247474747474875,
+      "n": 33
+    },
+    {
+      "group": "hard",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "docs",
+      "diff": -42.42424242424242,
+      "ci_low": -56.565656565656575,
+      "ci_high": -29.292929292929298,
+      "n": 33
+    },
+    {
+      "group": "hard",
+      "contrast": "Gemma 4 26B (local) - Claude Haiku 5.5",
+      "model": "full",
+      "diff": -15.151515151515152,
+      "ci_low": -27.27272727272727,
+      "ci_high": -5.050505050505051,
+      "n": 33
+    }
+  ],
+  "efficiency": [
+    {
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "raw",
+      "runs": 192,
+      "failure_rate": 0.0,
+      "tool_calls_median": 11.0,
+      "input_tokens_median": 47793.0,
+      "output_tokens_median": 4110.5,
+      "latency_p50": 34.150000000000006,
+      "latency_p95": 66.83149999999999,
+      "cost_per_question": 0.008965140625,
+      "total_cost": 1.721307
+    },
+    {
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "docs",
+      "runs": 192,
+      "failure_rate": 0.0,
+      "tool_calls_median": 9.0,
+      "input_tokens_median": 16535.5,
+      "output_tokens_median": 1483.0,
+      "latency_p50": 12.105,
+      "latency_p95": 25.5245,
+      "cost_per_question": 0.0030340572916666667,
+      "total_cost": 0.582539
+    },
+    {
+      "model": "anthropic:claude-haiku-5-5",
+      "level": "full",
+      "runs": 192,
+      "failure_rate": 0.0,
+      "tool_calls_median": 5.5,
+      "input_tokens_median": 17479.5,
+      "output_tokens_median": 1297.5,
+      "latency_p50": 14.149999999999999,
+      "latency_p95": 27.974499999999992,
+      "cost_per_question": 0.0027695416666666667,
+      "total_cost": 0.531752
+    },
+    {
+      "model": "ollama:gemma4:26b",
+      "level": "raw",
+      "runs": 192,
+      "failure_rate": 23.4375,
+      "tool_calls_median": 7.0,
+      "input_tokens_median": 15170.0,
+      "output_tokens_median": 1018.0,
+      "latency_p50": 17.93,
+      "latency_p95": 42.468999999999994,
+      "cost_per_question": 0.0,
+      "total_cost": 0.0
+    },
+    {
+      "model": "ollama:gemma4:26b",
+      "level": "docs",
+      "runs": 192,
+      "failure_rate": 21.875,
+      "tool_calls_median": 8.0,
+      "input_tokens_median": 12151.0,
+      "output_tokens_median": 704.0,
+      "latency_p50": 10.205,
+      "latency_p95": 27.294999999999984,
+      "cost_per_question": 0.0,
+      "total_cost": 0.0
+    },
+    {
+      "model": "ollama:gemma4:26b",
+      "level": "full",
+      "runs": 192,
+      "failure_rate": 11.458333333333332,
+      "tool_calls_median": 3.0,
+      "input_tokens_median": 6269.5,
+      "output_tokens_median": 330.0,
+      "latency_p50": 10.185,
+      "latency_p95": 24.801,
+      "cost_per_question": 0.0,
+      "total_cost": 0.0
+    }
+  ]
+}
