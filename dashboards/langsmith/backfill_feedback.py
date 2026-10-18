@@ -14,9 +14,8 @@ the trace whose start time is closest to the row's started_at wins.
 Dry run by default. Re-running is safe: feedback ids are deterministic, so
 existing feedback is skipped, not duplicated.
 
-  uv run python dashboards/langsmith/backfill_feedback.py \
-      evals/results/phase2/runs.jsonl evals/results/phase2-v2/runs.jsonl          # dry run
-  uv run python dashboards/langsmith/backfill_feedback.py ... --apply             # write
+  uv run python dashboards/langsmith/backfill_feedback.py            # dry run, phase2 + phase2-v2
+  uv run python dashboards/langsmith/backfill_feedback.py --apply    # write
 
 Retention: the LangSmith SDK extends a trace to long-lived retention (billed as
 an upgrade) whenever feedback is created, unless told not to. This script turns
@@ -33,6 +32,7 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
+DEFAULT_RUNS = ["evals/results/phase2/runs.jsonl", "evals/results/phase2-v2/runs.jsonl"]
 NAMESPACE = uuid.UUID("6f1d3c3e-5a8b-4c55-9a43-6b0f6f2a7d10")  # fixed: makes feedback ids reproducible
 
 
@@ -76,7 +76,7 @@ def aware(dt: datetime) -> datetime:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("runs", nargs="+", help="runs.jsonl files")
+    ap.add_argument("runs", nargs="*", default=DEFAULT_RUNS, help="runs.jsonl files (default: phase2 and phase2-v2)")
     ap.add_argument("--project", default="agent-ready-analytics")
     ap.add_argument("--key", default="correct", help="feedback key")
     ap.add_argument("--apply", action="store_true", help="write feedback (default is a dry run)")
