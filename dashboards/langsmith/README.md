@@ -25,6 +25,8 @@ Then open LangSmith, go to Monitoring, and open "Phase 2 benchmark: model x cont
 ## Notes
 
 - **Retention.** The SDK upgrades a trace to long-lived retention, which is billed, whenever feedback is added, unless told not to. The backfill turns that off. Add `--extend-retention` only if you want the traces kept past the 14-day base retention.
+- **Diagnosing empty charts.** `push_dashboard.py --diagnose` counts Phase 2 Haiku raw runs while adding one filter clause at a time. The first step that drops to 0 is the clause LangSmith's chart engine can't evaluate.
+- **Feedback needs `session_id`.** Feedback created without the trace's project (`session_id`) doesn't join to traces in chart queries. If an older run of the backfill wrote feedback without it, rerun with `--apply --replace`.
 - **Re-running is safe.** Feedback ids are deterministic, so existing feedback is skipped. `push_dashboard.py` deletes and recreates the dashboard with the same title.
 - **Changing a chart.** Edit `dashboard.json`, then rerun the push. Charts use LangSmith's V2 series format (`metric_definition` and `filter_definition`), because the API rejects V1 series. Supported metrics are listed in `metric_definition()` in `push_dashboard.py`. Valid chart types are `line`, `bar`, `table`, `kpi`, `top-k`, `pie` and `text`.
 - **Format retries.** `agent/graph.py` invokes a format retry separately, tagged only `format_retry`, so it lands as its own trace. The filters exclude those traces. The 7 affected rows keep their final score on the first trace, but that trace's latency and token count leave out the retry.

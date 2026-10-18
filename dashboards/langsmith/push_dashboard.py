@@ -154,6 +154,45 @@ def expected(spec, s, rows):
     return None
 
 
+def diagnose(api, spec, project_id) -> int:
+    """Count Phase 2 Haiku raw runs while adding one filter clause at a time.
+
+    The first step that drops to 0 is the clause LangSmith's chart engine can't evaluate.
+    Expected: 1261+768 project-wide roots in the window, 1261 for run:phase2, 192 at the end.
+    """
+    w = spec["window"]
+    model = spec["models"]["Haiku"]
+    steps = [
+        ("project only, wide window", None, ("2026-10-01T00:00:00Z", "2026-10-31T00:00:00Z")),
+        ("project only", None, None),
+        ("+ root", "eq(is_root, true)", None),
+        ("+ run:phase2", 'and(eq(is_root, true), has(tags, "run:phase2"))', None),
+        ("+ model", f'and(eq(is_root, true), has(tags, "run:phase2"), has(tags, "model:{model}"))', None),
+        ("+ context:raw", f'and(eq(is_root, true), has(tags, "run:phase2"), has(tags, "model:{model}"), '
+                          f'has(tags, "context:raw"))', None),
+        ("feedback only", f'eq(feedback_key, "{spec["feedback_key"]}")', None),
+        ("root + feedback", f'and(eq(is_root, true), eq(feedback_key, "{spec["feedback_key"]}"))', None),
+        ("full series filter", f'and(eq(is_root, true), has(tags, "run:phase2"), has(tags, "model:{model}"), '
+                               f'has(tags, "context:raw"), eq(feedback_key, "{spec["feedback_key"]}"))', None),
+    ]
+    for label, flt, window in steps:
+        start, end = window or (w["start"], w["end"])
+        fd = {"source_type": "tracing_project", "project_ids": [project_id]}
+        if flt:
+            fd["run_filter"] = flt
+        series = [{"id": "s0", "name": label, "metric_definition": {"type": "count"}, "filter_definition": fd}]
+        body = {"bucket_info": {"start_time": start, "end_time": end, "timezone": "UTC", "stride": {"days": 31}},
+                "chart": {"series": series, "common_filters": {"session": [project_id]}}}
+        try:
+            res = api.call("POST", "/api/v1/charts/preview", json=body)
+            vals = [p["value"] for p in res["data"]]
+            total = sum(v if isinstance(v, (int, float)) else 0 for v in vals)
+            print(f"  {label:<28} {total:>6}   raw points: {vals[:4]}")
+        except RuntimeError as e:
+            print(f"  {label:<28} ERROR  {str(e)[:300]}")
+    return 0
+
+
 def check(api, spec, project_id, rows) -> int:
     w = spec["window"]
     bucket = {"start_time": w["start"], "end_time": w["end"], "timezone": "UTC", "stride": {"days": 7}}
@@ -194,6 +233,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--spec", type=Path, default=SPEC)
     ap.add_argument("--dry-run", action="store_true", help="print payloads only")
+    ap.add_argument("--diagnose", action="store_true", help="count runs while adding filter clauses one at a time")
     ap.add_argument("--check", nargs="*", metavar="RUNS_JSONL",
                     help="preview charts and compare with the jsonl results (default: phase2 and phase2-v2)")
     args = ap.parse_args()
@@ -207,6 +247,8 @@ def main() -> int:
 
     api = Api()
     pid = api.project_id(spec["project"])
+    if args.diagnose:
+        return diagnose(api, spec, pid)
     if args.check is not None:
         return check(api, spec, pid, load_rows(args.check or DEFAULT_RUNS))
 
