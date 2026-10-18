@@ -4,6 +4,8 @@ version = "0.3.0"
 license = "MIT"
 description = "Benchmark of how a governed context layer (dbt, MetricFlow, guides) changes data agent accuracy across an API model and a local model"
 requires-python = ">=3.12,<3.14"
+keywords = ["data-agents", "llm-evaluation", "semantic-layer", "dbt", "metricflow", "bigquery", "langgraph",
+            "langsmith", "context-engineering", "text-to-sql", "analytics-engineering", "ollama", "benchmark"]
 dependencies = [
   # warehouse + modeling
   "dbt-core>=1.12,<1.13",

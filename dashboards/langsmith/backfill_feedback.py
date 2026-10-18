@@ -12,11 +12,12 @@ Match key: (run_id, model, level, qid, rep)
 If a key has several traces (an aborted attempt that was traced but not kept),
 the trace whose start time is closest to the row's started_at wins.
 
-Dry run by default. Re-running is safe: feedback ids are deterministic, so
-existing feedback is skipped, not duplicated.
+Dry run by default. Re-running is safe: traces that already carry a key are
+skipped, so only missing feedback is written. --verify counts what LangSmith has.
 
   uv run python dashboards/langsmith/backfill_feedback.py            # dry run, phase2 + phase2-v2
-  uv run python dashboards/langsmith/backfill_feedback.py --apply    # write
+  uv run python dashboards/langsmith/backfill_feedback.py --apply    # write what's missing
+  uv run python dashboards/langsmith/backfill_feedback.py --verify   # count what LangSmith has
 
 Retention: the LangSmith SDK extends a trace to long-lived retention (billed as
 an upgrade) whenever feedback is created, unless told not to. This script turns
@@ -85,7 +86,8 @@ def main() -> int:
     ap.add_argument("--apply", action="store_true", help="write feedback (default is a dry run)")
     ap.add_argument("--extend-retention", action="store_true", help="also upgrade traces to long-lived retention (billed)")
     ap.add_argument("--replace", action="store_true",
-                    help="delete this script's existing feedback first, then recreate it (use after a schema fix)")
+                    help="delete existing feedback for these keys and recreate it (use after a schema fix)")
+    ap.add_argument("--verify", action="store_true", help="count traces that carry each feedback key; no writes")
     ap.add_argument("--workers", type=int, default=8)
     args = ap.parse_args()
 
@@ -149,6 +151,29 @@ def main() -> int:
             print("More than 5% of rows have no trace. Check the tag/metadata names before applying.")
             return 1
 
+    keys = [args.key, args.outcome_key]
+
+    def existing_feedback() -> dict:
+        """(run_id, key) -> feedback ids already in LangSmith, for the matched traces."""
+        found: dict[tuple, list] = defaultdict(list)
+        ids = [run.id for _, run in matched]
+        for i in range(0, len(ids), 100):
+            for fb in client.list_feedback(run_ids=ids[i:i + 100], feedback_key=keys):
+                found[(str(fb.run_id), fb.key)].append(fb.id)
+        return found
+
+    def report(found: dict) -> int:
+        short = 0
+        for key in keys:
+            n = sum(1 for _, run in matched if found.get((str(run.id), key)))
+            dup = sum(1 for _, run in matched if len(found.get((str(run.id), key), [])) > 1)
+            short += len(matched) - n
+            print(f"  {key:<8} present on {n}/{len(matched)} traces" + (f", {dup} with duplicates" if dup else ""))
+        return short
+
+    if args.verify:
+        print("feedback in LangSmith (reads can lag writes by a minute):")
+        return 1 if report(existing_feedback()) else 0
     if not args.apply:
         print("\nDry run. Re-run with --apply to write feedback.")
         return 0
@@ -156,23 +181,29 @@ def main() -> int:
     def outcome(r) -> str:
         return "step_limit" if r["status"] in ("recursion_limit", "error") else ("correct" if r["correct"] else "wrong")
 
+    found = existing_feedback()
+
     def put(run, key, **fb) -> str:
-        fid = uuid.uuid5(NAMESPACE, f"{key}|{run.id}")
-        if args.replace:
+        have = found.get((str(run.id), key), [])
+        if have and not args.replace:
+            return f"{key}: present"
+        for fid in have:
             try:
                 client.delete_feedback(fid)
-            except Exception as e:  # nothing to delete is fine
-                if "404" not in str(e) and "not found" not in str(e).lower():
-                    return f"error: delete {str(e)[:200]}"
+            except Exception as e:
+                return f"error: delete {str(e)[:200]}"
+        # Deletes are applied asynchronously, so a replacement must never reuse the deleted id:
+        # a late delete would remove it. Fresh ids for replacements; deterministic ids otherwise.
+        fid = uuid.uuid4() if have else uuid.uuid5(NAMESPACE, f"{key}|{run.id}")
         try:
             # session_id and start_time let LangSmith's chart queries join feedback to the trace.
             client.create_feedback(run.id, key, trace_id=run.trace_id or run.id, feedback_id=fid,
                                    session_id=run.session_id, start_time=run.start_time,
                                    extend_trace_retention=args.extend_retention, **fb)
-            return f"{key}: {'replaced' if args.replace else 'created'}"
-        except Exception as e:  # existing id -> conflict; anything else is reported
+            return f"{key}: {'replaced' if have else 'created'}"
+        except Exception as e:
             msg = str(e)
-            return f"{key}: exists" if ("409" in msg or "already exists" in msg.lower()) else f"error: {msg[:200]}"
+            return f"{key}: present" if ("409" in msg or "already exists" in msg.lower()) else f"error: {msg[:200]}"
 
     def write(pair):
         r, run = pair
@@ -187,9 +218,10 @@ def main() -> int:
                 results[res if not res.startswith("error") else "error"] += 1
                 if res.startswith("error"):
                     errors.append(res)
-    print(dict(results))
+    print(dict(sorted(results.items())))
     for e in errors[:5]:
         print(" ", e)
+    print("Run with --verify in a minute to confirm every trace has both keys.")
     return 1 if errors else 0
 
 

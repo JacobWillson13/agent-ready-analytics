@@ -15,15 +15,3 @@ exposures:
       - ref('fct_pypi_downloads_daily')
     owner: {name: Data Team, email: data@lanternfly.dev}
 
-  - name: customer_360
-    label: Customer 360 (Lightdash)
-    type: dashboard
-    maturity: medium
-    url: http://localhost:8080
-    description: Account health view joining ARR, usage, and support for each customer.
-    depends_on:
-      - ref('dim_customers')
-      - ref('fct_arr_monthly')
-      - ref('fct_daily_usage')
-      - ref('fct_support_tickets')
-    owner: {name: Data Team, email: data@lanternfly.dev}

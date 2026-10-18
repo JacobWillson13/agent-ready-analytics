@@ -1,5 +1,15 @@
 # agent-ready-analytics
 
+[![ci](https://github.com/JacobWillson13/agent-ready-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/JacobWillson13/agent-ready-analytics/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
+![dbt 1.12](https://img.shields.io/badge/dbt-1.12-FF694B?logo=dbt&logoColor=white)
+![MetricFlow](https://img.shields.io/badge/semantic%20layer-MetricFlow-FF694B)
+![BigQuery](https://img.shields.io/badge/BigQuery-warehouse-669DF6?logo=googlebigquery&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-agent-1C3C3C?logo=langchain&logoColor=white)
+![LangSmith](https://img.shields.io/badge/LangSmith-evals-1C3C3C?logo=langchain&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-Gemma%204%2026B-000000?logo=ollama&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 Data agents can write SQL. They can't infer your business rules. This project measures how much a
 governed context layer (dbt docs, a MetricFlow semantic layer, business guides) changes a data agent's
 accuracy, cost, and latency, and whether it lets a small model running on one consumer GPU compete with an
@@ -9,13 +19,16 @@ against an answer key computed from simulation state.
 > **All company data is synthetic.** Lanternfly Labs is a fictional developer-tools SaaS company generated
 > by a seeded simulation in this repo. The PyPI download and GitHub release data is real.
 
+![Accuracy by model and context level, original and hard questions](docs/figures/fig1_model_x_context.png)
+
+*Accuracy by context level, with 95% question-clustered intervals. Across all 64 questions, the governed
+context layer takes a local 26B model from 23% to 83% and closes most of the gap to the API model.*
+
 ## Results
 
 64 questions, 3 context levels, 2 models, 3 runs each: 1,152 agent executions. Claude Haiku 5.5 runs
 through the Anthropic API; Gemma 4 26B runs locally on an RTX 3090 through Ollama. Full methods, tables,
 and failure analysis: **[docs/REPORT.md](docs/REPORT.md)**.
-
-![Accuracy by model and context level](docs/figures/fig1_model_x_context.png)
 
 | Accuracy, all 64 questions | raw tables | dbt docs | full context |
 |---|---|---|---|
@@ -46,8 +59,8 @@ and failure analysis: **[docs/REPORT.md](docs/REPORT.md)**.
 ### Phase 1: one model, original questions
 
 Phase 1 ran Claude Sonnet 5.5 on the 31 original questions (25 core, 6 held out) and found the same
-direction: 76% with raw tables, 100% with docs or full context, with full context using about a quarter of
-the tokens. It also set up context changes to be evaluated like code. In
+direction: on the core set, 76% with raw tables and 100% with docs or full context, with full context using
+about a quarter of the tokens. It also set up context changes to be evaluated like code. In
 [PR #1](https://github.com/JacobWillson13/agent-ready-analytics/pull/1), traces showed the full-context agent
 rediscovering metrics on every question; injecting a compact index cut tokens 43% and latency 32% with
 accuracy held. [PR #3](https://github.com/JacobWillson13/agent-ready-analytics/pull/3) runs that eval on every
@@ -109,6 +122,13 @@ question is about sales motion:
 
 ### Evaluation in LangSmith
 
+The benchmark dashboard is defined as code in [`dashboards/langsmith/`](dashboards/langsmith/). One script
+attaches each locally scored result to its trace as feedback; another builds the charts through the LangSmith
+API and checks every Phase 2 value against the results files.
+
+![LangSmith dashboard: accuracy by model and context, outcomes, hard questions, and the context fix](docs/screenshots/langsmith-dashboard-accuracy.png)
+![LangSmith dashboard: tokens, latency, and step-limit rate by context](docs/screenshots/langsmith-dashboard-efficiency.png)
+
 Every benchmark execution is traced and tagged by run, model, and context level:
 
 ![LangSmith trace list filtered to the Phase 2 run](docs/screenshots/langsmith-trace-list.png)
@@ -168,7 +188,7 @@ self-hosted deployments with no telemetry, internal usage, duplicate events, and
 | Models | Claude Haiku 5.5 and Sonnet 5.5 (API); Gemma 4 26B through Ollama on an RTX 3090 |
 | Evals | LangSmith experiments; `evals/benchmark.py` and `evals/analyze.py` for the model by context benchmark |
 | CI | GitHub Actions runs dbt build, reconciliation tests, and the context eval on pull requests |
-| Dashboard (optional) | Self-hosted Lightdash, see `lightdash/` |
+| Dashboard | LangSmith custom dashboard, defined as code in `dashboards/langsmith/` |
 
 ## How it flows
 
@@ -180,6 +200,7 @@ self-hosted deployments with no telemetry, internal usage, duplicate events, and
 5. The agent answers questions with tools that read dbt docs, endorsements, guides, and metrics.
 6. `evals/build_golden.py` computes golden answers from the answer key; `evals/benchmark.py` runs every model,
    level, question, and repetition; `evals/analyze.py` produces the tables and figures.
+7. `dashboards/langsmith/` attaches each score to its LangSmith trace and builds the benchmark dashboard.
 
 ## Run it
 
@@ -201,6 +222,7 @@ make bench-smoke         # 3 questions per model and level; checks keys, tools, 
 make bench-pilot         # Haiku, full context, hard questions (about $0.12)
 make bench               # full benchmark; resumable, stops Haiku at $8
 make analyze             # tables in evals/results/phase2/summary.md, figures in docs/figures
+make dashboard           # scores -> LangSmith feedback, then build and check the LangSmith dashboard
 ```
 
 The benchmark checks credentials, the GCP project, and the Ollama model before it runs anything.

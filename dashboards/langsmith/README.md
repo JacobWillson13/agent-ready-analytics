@@ -24,10 +24,13 @@ It's laid out as two screenshots.
 
 ```
 source ~/.config/ara/env
-uv run python dashboards/langsmith/backfill_feedback.py                    # dry run
-uv run python dashboards/langsmith/backfill_feedback.py --apply --replace  # writes correct + outcome
-uv run python dashboards/langsmith/push_dashboard.py                       # create, lay out, check
+uv run python dashboards/langsmith/backfill_feedback.py            # dry run: expect 1920 matched, 0 missing
+uv run python dashboards/langsmith/backfill_feedback.py --apply    # writes correct + outcome where missing
+uv run python dashboards/langsmith/backfill_feedback.py --verify   # a minute later: 1920/1920 for both keys
+uv run python dashboards/langsmith/push_dashboard.py               # create, lay out, check
 ```
+
+`make dashboard` runs the apply and push steps.
 
 Then open LangSmith, go to Monitoring, and open "Agent benchmark: model x context". Set the time range to cover the Phase 1 dates the script prints through 2026-10-18.
 
@@ -38,10 +41,11 @@ Then open LangSmith, go to Monitoring, and open "Agent benchmark: model x contex
 - The API accepts only V2 series (`metric_definition` + `filter_definition`) and needs `common_filters.session`.
 - Run filters can't `or()` across tag comparisons.
 - Feedback must carry the trace's `session_id`, or chart queries can't join it to the trace.
+- Never recreate feedback under an id you just deleted. Deletes are applied asynchronously, so a late delete can remove the replacement; `--replace` uses fresh ids for that reason.
 
 ## Notes
 
 - **Retention.** The SDK upgrades a trace to long-lived retention, which is billed, whenever feedback is added, unless told not to. The backfill turns that off. Add `--extend-retention` only if you want the Phase 2 traces kept past the 14-day base retention.
 - **Layout.** Widths are percentages of a row, and heights are relative to LangSmith's default row height. The script scales both from the default layout it reads back. `--no-layout` keeps the default grid.
 - **Format retries.** `agent/graph.py` invokes a format retry separately, tagged only `format_retry`, so it lands as its own trace. The filters exclude those traces. The 7 affected rows keep their final score on the first trace, but that trace's latency and token count leave out the retry.
-- **Cost** comes from LangSmith's model price map, so it can differ slightly from the harness's own cost. LangSmith shows $2.7 for Haiku's Phase 2 runs; the jsonl total is $2.84.
+- **Cost** comes from LangSmith's model price map, so it can differ slightly from the harness's own cost. The dashboard shows $2.8 for Haiku's Phase 2 runs; the jsonl total is $2.84.

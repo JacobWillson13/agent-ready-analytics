@@ -2,7 +2,7 @@
 SCALE ?= 1.0
 DATA  ?= data
 
-.PHONY: generate load ingest build recon golden evals evals-full agent lightdash all bench-smoke bench-pilot bench bench-v2 analyze
+.PHONY: generate load ingest build recon golden evals evals-full agent dashboard all bench-smoke bench-pilot bench bench-v2 analyze
 
 generate:            ## synthetic company, through the snapshot date
 	uv run python -m generator --scale $(SCALE) --out $(DATA)
@@ -59,7 +59,8 @@ bench-v2:            ## rerun docs and full after a context change; raw is reuse
 analyze:             ## tables, mixed-effects model, and figures for a run
 	uv run python evals/analyze.py evals/results/$(RUN) --figures docs/figures
 
-lightdash:
-	docker compose -f lightdash/docker-compose.yml up -d
+dashboard:           ## attach benchmark scores to LangSmith traces, then build the LangSmith dashboard
+	uv run python dashboards/langsmith/backfill_feedback.py --apply
+	uv run python dashboards/langsmith/push_dashboard.py
 
 all: generate load ingest build golden evals
