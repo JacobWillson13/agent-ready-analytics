@@ -214,6 +214,12 @@ $1.18 of Haiku). Raw was not rerun because it cannot see the context layer. Comp
 | Point-in-time dimension (`paying_ent_sep26`, `x_avg_plus_seats_q3`) | 2 of 12 | 11 of 12 |
 | Contract ARR (`x_contract_arr_2025`, `x_nb_arr_2026`) | 2 of 12 | 1 of 12 |
 
+Correct is not the same as governed. In the fixed Haiku trace shown in the README (`paying_ent_sep26`), the
+agent avoided `customer__motion` but did not use `customer_month__motion`, which is a dimension of
+`paying_customers` in the same semantic model. It said the metric had no as-of-month motion split and counted
+from `fct_arr_monthly` with SQL instead. The answer matches because the mart is endorsed; how many of the 11
+correct runs took the metric path was not checked.
+
 With full context, Haiku still answered "UNAVAILABLE" on `x_contract_arr_2025` in 3 of 3 runs, after 15
 to 17 tool calls, while it answered correctly in 3 of 3 runs with docs, where there is no endorsement
 ranking or metric index. Describing the intermediate model better and loosening the prompt was not enough

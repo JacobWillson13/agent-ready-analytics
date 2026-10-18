@@ -108,6 +108,14 @@ put each dimension's description in front of the agent.
 </tr>
 </table>
 
+After the fix, a Haiku full-context run answered 251. It read the new dimension description, saw that
+`customer__motion` is today's value, and counted from the endorsed mart's month-level `motion` column with
+SQL. It still missed the governed route: its claim that `paying_customers` has no as-of-month motion split is
+wrong, since `customer_month__motion` is in the same semantic model. The fix stopped the wrong dimension; it
+did not guarantee the metric path.
+
+![Haiku trace after the fix: reads the guide and model docs, counts from fct_arr_monthly by month-level motion, answers 251](docs/screenshots/langsmith-fixed-trace.png)
+
 ### More agent behavior
 
 With dbt docs only, the agent reads that ARR is a balance and reports it at the end of the period instead of
