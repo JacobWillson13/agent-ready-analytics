@@ -81,6 +81,7 @@ def chart_payload(spec: dict, chart: dict, index: int, project_id: str, section_
         raise ValueError(f"unknown chart_type {chart['chart_type']!r}")
     return {"title": chart["title"], "description": chart.get("description"), "chart_type": chart["chart_type"],
             "index": index, "section_id": section_id,
+            "common_filters": {"session": [project_id]},
             "series": [series_payload(spec, s, project_id) for s in chart["series"]]}
 
 
@@ -161,7 +162,8 @@ def check(api, spec, project_id, rows) -> int:
         if chart["chart_type"] == "text":
             continue
         series = [series_payload(spec, s, project_id, sid=f"s{i}") for i, s in enumerate(chart["series"])]
-        res = api.call("POST", "/api/v1/charts/preview", json={"bucket_info": bucket, "chart": {"series": series}})
+        chart_body = {"series": series, "common_filters": {"session": [project_id]}}
+        res = api.call("POST", "/api/v1/charts/preview", json={"bucket_info": bucket, "chart": chart_body})
         got = {}
         for pt in res["data"]:
             v = pt["value"]

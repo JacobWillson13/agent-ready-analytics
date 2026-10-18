@@ -28,6 +28,7 @@ import argparse
 import json
 import sys
 import uuid
+import warnings
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -91,16 +92,26 @@ def main() -> int:
     print(f"jsonl rows: {len(rows)}  run_ids: {run_ids}")
 
     client = Client()
-    tag_filter = "or(" + ", ".join(f'has(tags, "run:{r}")' for r in run_ids) + ")" if len(run_ids) > 1 \
-        else f'has(tags, "run:{run_ids[0]}")'
     candidates: dict[tuple, list] = defaultdict(list)
     untagged = 0
-    for run in client.list_runs(project_name=args.project, is_root=True, filter=tag_filter):
-        k = trace_key(run)
-        if k is None:
-            untagged += 1
-            continue
-        candidates[k].append(run)
+    seen = set()
+    # One query per run id: LangSmith rejects or() across tag comparisons.
+    # list_runs is deprecated (removal after 2027-01-31) but still works; silence its warning.
+    warnings.filterwarnings("ignore", category=DeprecationWarning, module="langsmith")
+    warnings.filterwarnings("ignore", message=".*list_runs.*deprecated.*")
+    for rid in run_ids:
+        found = 0
+        for run in client.list_runs(project_name=args.project, is_root=True, filter=f'has(tags, "run:{rid}")'):
+            if run.id in seen:
+                continue
+            seen.add(run.id)
+            found += 1
+            k = trace_key(run)
+            if k is None:
+                untagged += 1
+                continue
+            candidates[k].append(run)
+        print(f"  run:{rid}: {found} root traces")
     n_traces = sum(len(v) for v in candidates.values())
     print(f"root traces found: {n_traces}  (missing tags/metadata: {untagged})")
 
