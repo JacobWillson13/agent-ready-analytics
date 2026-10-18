@@ -19,16 +19,18 @@ against an answer key computed from simulation state.
 > **All company data is synthetic.** Lanternfly Labs is a fictional developer-tools SaaS company generated
 > by a seeded simulation in this repo. The PyPI download and GitHub release data is real.
 
-![Accuracy by model and context level, original and hard questions](docs/figures/fig1_model_x_context.png)
+![LangSmith dashboard: accuracy by model and context, Sonnet baseline, Gemma outcomes, hard questions, and the context fix](docs/screenshots/langsmith-dashboard-accuracy.png)
 
-*Accuracy by context level, with 95% question-clustered intervals. Across all 64 questions, the governed
-context layer takes a local 26B model from 23% to 83% and closes most of the gap to the API model.*
+*The benchmark in LangSmith. With raw tables, local Gemma 4 26B gets 23% right; with the governed context layer,
+83%. The dashboard is built from code in [`dashboards/langsmith/`](dashboards/langsmith/).*
 
 ## Results
 
 64 questions, 3 context levels, 2 models, 3 runs each: 1,152 agent executions. Claude Haiku 5.5 runs
 through the Anthropic API; Gemma 4 26B runs locally on an RTX 3090 through Ollama. Full methods, tables,
 and failure analysis: **[docs/REPORT.md](docs/REPORT.md)**.
+
+![Accuracy by model and context level, original and hard questions, with 95% intervals](docs/figures/fig1_model_x_context.png)
 
 | Accuracy, all 64 questions | raw tables | dbt docs | full context |
 |---|---|---|---|
@@ -134,7 +136,8 @@ The benchmark dashboard is defined as code in [`dashboards/langsmith/`](dashboar
 attaches each locally scored result to its trace as feedback and verifies every run carries it; another builds
 the charts through the LangSmith API.
 
-![LangSmith dashboard: accuracy by model and context, outcomes, hard questions, and the context fix](docs/screenshots/langsmith-dashboard-accuracy.png)
+The accuracy half is at the top of this README. The efficiency half:
+
 ![LangSmith dashboard: tokens, latency, and step-limit rate by context](docs/screenshots/langsmith-dashboard-efficiency.png)
 
 Every benchmark execution is traced and tagged by run, model, and context level:
