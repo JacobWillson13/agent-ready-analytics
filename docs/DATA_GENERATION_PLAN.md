@@ -10,7 +10,7 @@ $39/seat with 10k included traces, enterprise contracts with self-hosted and hyb
 
 | Knob | Value |
 |---|---|
-| Window | 2024-01-01 to 2026-10-14 (recording day; also the dbt `as_of_date`) |
+| Window | 2024-01-01 to 2026-10-14 (snapshot date; also the dbt `as_of_date`) |
 | Signups | 80k orgs, growing about 4x across the window |
 | Activation | about 50% reach 1,000 cumulative traces |
 | Plus conversion | 22% of activated orgs |
