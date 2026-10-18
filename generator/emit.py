@@ -1,7 +1,7 @@
 """Turn entities into daily activity and emitted source tables (usage, events, invoices, tickets)."""
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 import numpy as np
 import pyarrow as pa
@@ -182,7 +182,7 @@ class Emitter:
                                day=days.astype(np.int16), quantity=np.asarray(qty, dtype=np.int64)))
 
     def _events(self, o, ev_days, user_ids):
-        s, rng = self.sim, self.sim.rng
+        rng = self.sim.rng
         n = ev_days.size
         secs = np.clip(rng.normal(15 * 3600, 3.5 * 3600, n), 0, 86_399).astype(np.int64)
         names = rng.choice(list(EVENTS), n, p=np.array(list(EVENTS.values())))

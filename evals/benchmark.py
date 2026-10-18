@@ -28,7 +28,7 @@ import sys
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from importlib import metadata
 from pathlib import Path

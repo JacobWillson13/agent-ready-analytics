@@ -11,7 +11,7 @@ It's laid out as two screenshots.
    - Accuracy by context for Haiku, Gemma and Sonnet (Phase 1).
    - Gemma's outcomes (correct, wrong, step limit), Gemma on the 33 hard questions, and the context fix for Gemma.
 2. **Efficiency.**
-   - Median tokens by context for each model.
+   - Mean tokens by context for each model.
    - Haiku latency, Gemma's step-limit rate, and the context fix for Haiku.
    - A notes row.
 

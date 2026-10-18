@@ -77,6 +77,8 @@ def metric_definition(spec: dict, metric: str) -> dict:
         return {"type": "sum", "field": "total_cost"}
     if metric == "median_tokens":
         return {"type": "percentile", "field": "total_tokens", "params": {"p": 0.5}}
+    if metric == "mean_tokens":
+        return {"type": "avg", "field": "total_tokens"}
     if metric == "latency_p50":
         return {"type": "percentile", "field": "latency_seconds", "params": {"p": 0.5}}
     raise ValueError(f"unsupported metric {metric!r}; add it to metric_definition()")
@@ -308,6 +310,8 @@ def main() -> int:
                 # Same chart id, so LangSmith keeps its panel size and position.
                 payload.pop("index", None)
                 payload.pop("section_id", None)
+                if payload["chart_type"] == "text":
+                    payload = {"markdown": payload["markdown"]}  # text blocks reject chart_type updates
                 api.call("PATCH", f"/api/v1/charts/{have[key]['id']}", json=payload)
                 updated += 1
             else:
