@@ -1,6 +1,6 @@
 # LangSmith dashboard
 
-The benchmark dashboard, defined as code. `dashboard.json` is the spec: charts in display order. `push_dashboard.py` builds them through the LangSmith REST API on LangSmith's two-column grid. `backfill_feedback.py --verify` confirms every scored run carries its feedback.
+The benchmark dashboard, defined as code. `dashboard.json` is the spec: charts in display order. `push_dashboard.py` builds them through the LangSmith REST API and, on later runs, updates the same charts in place so panel sizes you set in LangSmith are kept. `backfill_feedback.py --verify` confirms every scored run carries its feedback.
 
 ## What it shows
 
@@ -27,7 +27,8 @@ source ~/.config/ara/env
 uv run python dashboards/langsmith/backfill_feedback.py            # dry run: expect 1920 matched, 0 missing
 uv run python dashboards/langsmith/backfill_feedback.py --apply    # writes correct + outcome where missing
 uv run python dashboards/langsmith/backfill_feedback.py --verify   # a minute later: 1920/1920 for both keys
-uv run python dashboards/langsmith/push_dashboard.py               # create or replace the dashboard
+uv run python dashboards/langsmith/push_dashboard.py               # create, or update in place
+uv run python dashboards/langsmith/push_dashboard.py --save-layout # after sizing panels: writes layout.json
 ```
 
 `make dashboard` runs the apply and push steps.
@@ -46,6 +47,6 @@ Then open LangSmith, go to Monitoring, and open "Agent benchmark: model x contex
 ## Notes
 
 - **Retention.** The SDK upgrades a trace to long-lived retention, which is billed, whenever feedback is added, unless told not to. The backfill turns that off. Add `--extend-retention` only if you want the Phase 2 traces kept past the 14-day base retention.
-- **Layout.** The section API accepts a `layout`, but a new dashboard has none to read back, so the script keeps LangSmith's default two-column grid; charts appear in spec order.
+- **Layout.** Size and arrange panels in LangSmith, then run `--save-layout` and commit `layout.json`. Normal pushes never touch the layout; `--recreate` rebuilds the dashboard and reapplies `layout.json`. Charts are matched by title, and text blocks by order. A new chart in the spec gets a new panel; deleted ones stay unless you pass `--prune`. `retired_titles` in the spec lists old dashboards to delete.
 - **Format retries.** `agent/graph.py` invokes a format retry separately, tagged only `format_retry`, so it lands as its own trace. The filters exclude those traces. The 7 affected rows keep their final score on the first trace, but that trace's latency and token count leave out the retry.
 - **Cost** comes from LangSmith's model price map, so it can differ slightly from the harness's own cost. The dashboard shows $2.8 for Haiku's Phase 2 runs; the jsonl total is $2.84.
