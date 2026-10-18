@@ -190,8 +190,10 @@ def chart_keys(charts: list[dict]) -> list[str]:
     return keys
 
 
-def find_section(api, title: str) -> dict | None:
-    res = api.call("POST", "/api/v1/charts", json={"omit_data": True})
+def find_section(api, spec: dict, title: str) -> dict | None:
+    w = spec["window"]  # the endpoint rejects requests without start_time
+    res = api.call("POST", "/api/v1/charts", json={"omit_data": True, "start_time": w["start"], "end_time": w["end"],
+                                                   "timezone": "UTC", "stride": {"days": 1}})
     return next((s for s in res.get("sections", []) if s.get("title") == title), None)
 
 
@@ -254,7 +256,7 @@ def main() -> int:
 
     api = Api()
     if args.save_layout:
-        sec = find_section(api, spec["title"])
+        sec = find_section(api, spec, spec["title"])
         if not sec:
             raise RuntimeError(f"No dashboard titled {spec['title']!r}.")
         return save_layout(sec)
@@ -269,12 +271,12 @@ def main() -> int:
     ids = {"project": api.project_id(spec["project"]), "phase1": [chosen[l]["id"] for l in ("raw", "docs", "full")]}
 
     for old_title in spec.get("retired_titles", []):
-        old = find_section(api, old_title)
+        old = find_section(api, spec, old_title)
         if old:
             api.call("DELETE", f"/api/v1/charts/section/{old['id']}")
             print(f"deleted retired dashboard {old_title!r}")
 
-    sec = find_section(api, spec["title"])
+    sec = find_section(api, spec, spec["title"])
     if sec and args.recreate:
         api.call("DELETE", f"/api/v1/charts/section/{sec['id']}")
         print(f"deleted dashboard {sec['id']} for a full rebuild")
