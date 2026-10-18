@@ -82,6 +82,8 @@ def main() -> int:
     ap.add_argument("--key", default="correct", help="feedback key")
     ap.add_argument("--apply", action="store_true", help="write feedback (default is a dry run)")
     ap.add_argument("--extend-retention", action="store_true", help="also upgrade traces to long-lived retention (billed)")
+    ap.add_argument("--replace", action="store_true",
+                    help="delete this script's existing feedback first, then recreate it (use after a schema fix)")
     ap.add_argument("--workers", type=int, default=8)
     args = ap.parse_args()
 
@@ -128,6 +130,7 @@ def main() -> int:
             cands = sorted(cands, key=lambda c: abs(aware(c.start_time) - t0))
         matched.append((r, cands[0]))
     extra_traces = n_traces - len(matched)
+    gaps = sorted(abs((aware(run.start_time) - parse_ts(r["started_at"])).total_seconds()) for r, run in matched)
 
     missing_set = set(missing)
     by_cell = Counter((k[0], k[1], k[2]) for k in rows if k not in missing_set)
@@ -135,6 +138,9 @@ def main() -> int:
           f"traces left without feedback: {extra_traces}")
     for cell, n in sorted(by_cell.items()):
         print(f"  {cell[0]:<10} {cell[1]:<28} {cell[2]:<5} {n}")
+    if gaps:
+        print(f"trace start vs jsonl started_at: median {gaps[len(gaps) // 2]:.2f}s, max {gaps[-1]:.2f}s "
+              f"(large values mean a wrong match)")
     if missing:
         print("first missing keys:", missing[:5])
         if len(missing) > 0.05 * len(rows):
@@ -149,12 +155,20 @@ def main() -> int:
         r, run = pair
         fid = uuid.uuid5(NAMESPACE, f"{args.key}|{run.id}")
         try:
+            if args.replace:
+                try:
+                    client.delete_feedback(fid)
+                except Exception as e:  # nothing to delete is fine
+                    if "404" not in str(e) and "not found" not in str(e).lower():
+                        return f"error: delete {str(e)[:200]}"
+            # session_id and start_time let LangSmith's chart queries join feedback to the trace.
             client.create_feedback(
                 run.id, args.key, score=int(r["correct"]), comment=r.get("reason"),
                 trace_id=run.trace_id or run.id, feedback_id=fid,
+                session_id=run.session_id, start_time=run.start_time,
                 extend_trace_retention=args.extend_retention,
             )
-            return "created"
+            return "replaced" if args.replace else "created"
         except Exception as e:  # existing id -> conflict; anything else is reported
             msg = str(e)
             return "exists" if ("409" in msg or "already exists" in msg.lower()) else f"error: {msg[:200]}"
