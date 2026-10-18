@@ -33,7 +33,9 @@ and failure analysis: **[docs/REPORT.md](docs/REPORT.md)**.
 3. **The eval found real defects in the context layer.** Every Haiku full-context error traces to one of
    three causes: a semantic-layer dimension that reports current state, used for a point-in-time question;
    endorsement steering that hides the only model holding contract ARR; and one ambiguous question. Gemma
-   failed the same questions. Each is a one-line context fix.
+   failed the same questions. In a follow-up rerun, fixing the dimension descriptions took those questions
+   from 2 of 12 runs correct to 11 of 12. Rewording docs and the prompt did not fix the contract questions
+   (2 of 12 to 1 of 12); that needs a structural change. See the report's follow-up section.
 4. **The local model's weakness is finishing, not reasoning.** Gemma hit the 60-step limit on 19% of runs.
    When it finished with full context, it was right 94% of the time.
 5. **Context is cheaper.** With full context Haiku used 63% fewer input tokens and 59% less time than with raw
@@ -53,6 +55,50 @@ pull request that touches context and posts the change as a comment.
 
 Phase 2 added a second model, 33 harder questions written before any Phase 2 run, repeated runs, and
 statistical intervals, because Phase 1's 100% results could not separate the context levels.
+
+## What it looks like
+
+**The defect, in a trace.** Asked how many enterprise customers were paying at the end of September 2026,
+Haiku with full context grouped the governed `paying_customers` metric by `customer__motion`, which is each
+customer's motion today, not in September. It answered 252; the answer is 251. Gemma made the same choice
+with a filter instead of a group-by. The follow-up fix put each dimension's description in front of the
+agent.
+
+![Haiku trace: query_metrics grouped by customer__motion returns 252](docs/screenshots/langsmith-defect-trace.png)
+
+<details>
+<summary>More screenshots: LangSmith traces and experiments, BigQuery</summary>
+
+Gemma 4 26B, full context, same question and same wrong dimension:
+
+![Gemma trace: query_metrics filtered on customer__motion returns 252](docs/screenshots/langsmith-defect-trace-gemma.png)
+
+Gemma with raw tables only: a long chain of SQL guesses, including filtering on deployment type when the
+question is about sales motion:
+
+![Gemma raw-table trace with many run_sql calls](docs/screenshots/langsmith-gemma-raw.png)
+
+Benchmark traces in LangSmith, tagged by run, model, and context level:
+
+![LangSmith trace list filtered to the Phase 2 run](docs/screenshots/langsmith-trace-list.png)
+
+Phase 1 experiments on the 25 core questions (raw 0.76, docs and full 1.00):
+
+![LangSmith experiment comparison](docs/screenshots/langsmith-experiments-core.png)
+
+BigQuery datasets, with dbt column descriptions persisted to the warehouse:
+
+![BigQuery explorer and fct_arr_monthly schema](docs/screenshots/bigquery-explorer.png)
+
+ARR by motion from the endorsed mart (September 2026 totals $36.16M, matching the answer key):
+
+![BigQuery query results](docs/screenshots/bigquery-query.png)
+
+The answer key in `eval_truth` is readable by the CI account but not the agent account:
+
+![eval_truth sharing permissions](docs/screenshots/bigquery-eval-truth-access.png)
+
+</details>
 
 ## The setup
 
