@@ -51,7 +51,7 @@ models:
         description: False for secondary orgs (usually sandboxes) of an enterprise account.
       - name: current_plan
         data_type: string
-        description: Plan active on as_of_date. developer (free), plus, enterprise, enterprise_sandbox, internal, or churned (no active plan).
+        description: Today's plan (on as_of_date). developer (free), plus, enterprise, enterprise_sandbox, internal, or churned. For a past day or period use org_day__plan_on_day from fct_daily_usage.
         dimension: {type: categorical}
       - name: signup_date
         data_type: date
@@ -121,7 +121,7 @@ models:
         data_type: string
       - name: motion
         data_type: string
-        description: "{{ doc('motion') }} This is the customer's motion today; fct_arr_monthly.motion gives it per month."
+        description: "{{ doc('motion') }} Today's value. For a past month (paying customers, ARR by motion), use customer_month__motion from fct_arr_monthly."
         dimension: {type: categorical}
         data_tests:
           - accepted_values:
@@ -198,7 +198,7 @@ models:
         description: "{{ doc('as_of_date') }}"
       - name: motion
         data_type: string
-        description: Motion in this month. An upgraded customer is self_serve before the upgrade and enterprise after.
+        description: Motion in this month, as of that month. Use for any count or ARR by motion in a past month. An upgraded customer is self_serve before the upgrade and enterprise after.
         dimension: {type: categorical}
       - name: enterprise_arr_usd
         data_type: float64
@@ -276,7 +276,7 @@ models:
         dimension: {type: time}
       - name: plan_on_day
         data_type: string
-        description: The org's plan on that day (developer, plus, enterprise, enterprise_sandbox, or none).
+        description: The org's plan on that day, as of that day (developer, plus, enterprise, enterprise_sandbox, or none). Use for usage or seats by plan over a past period.
         dimension: {type: categorical}
       - name: deployment_type
         data_type: string

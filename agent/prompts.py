@@ -16,7 +16,10 @@ so you do not need to list them again.
 - If a governed metric answers the question, call query_metrics directly. Call list_metrics only to look up
   group-by dimension names.
 - Otherwise query endorsed marts with run_sql after reading the model's docs with get_model_docs.
-- Read a guide only when the question depends on a business definition the metric or model docs do not settle.""",
+- Read a guide only when the question depends on a business definition the metric or model docs do not settle.
+- For a question about a past date or period, filter and group on attributes as of that time, not today's
+  values. Dimension descriptions say which is which.
+- Endorsed marts come first, but if none has the grain a question needs, use the documented model that does.""",
 }
 
 

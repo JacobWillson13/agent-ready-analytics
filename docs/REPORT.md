@@ -162,8 +162,8 @@ logic reproduces both keys to the dollar.
 
 The practical lesson: a semantic layer that exposes both current-state and point-in-time versions of an
 attribute needs the distinction stated where the agent picks dimensions, and endorsement ranking should
-never hide the only source for a question. Both are one-line context changes, which is the loop the CI
-eval exists to catch.
+never hide the only source for a question. The follow-up below tests whether small context edits fix
+them.
 
 ## Why Gemma underperformed
 
@@ -184,6 +184,59 @@ limit would mostly add latency.
 Gemma's repetitions disagreed with each other on 25% of docs questions despite temperature 0 and a fixed
 seed, so local inference was not deterministic in practice. Repetitions were kept and analyzed the same
 way for both models.
+
+## Follow-up: fixing the defects (run phase2-v2, October 17)
+
+Two context changes targeted the defects above. Neither references a question or an answer.
+
+1. **Dimension descriptions.** `list_metrics` had shown dimension names only, so `customer__motion` and
+   `customer_month__motion` looked interchangeable. It now shows each dimension's description, and the four
+   affected descriptions say whether the value is today's or as of that time. The full prompt gained one
+   rule: for a past date or period, use attributes as of that time.
+2. **Contract discoverability.** `int_contracts` got a grain-first description, and the prompt now allows a
+   documented non-endorsed model when no endorsed mart has the grain a question needs.
+
+Docs and full were rerun for both models, 3 repetitions each, on the same 64 questions (768 executions,
+$1.18 of Haiku). Raw was not rerun because it cannot see the context layer. Comparison:
+`evals/compare_runs.py`, output in `evals/results/phase2-v2/compare_vs_phase2.md`.
+
+| Model | Level | Before | After | Change (pts, 95% CI) | Step-limit hits before, after |
+|---|---|---|---|---|---|
+| Haiku | docs | 99.5 | 99.5 | +0.0 (-1.6 to +1.6) | 0%, 0% |
+| Haiku | full | 93.8 | 95.8 | +2.1 (-1.6 to +5.7) | 0%, 0% |
+| Gemma | docs | 68.2 | 66.7 | -1.6 (-13.0 to +9.9) | 21.9%, 20.8% |
+| Gemma | full | 83.3 | 87.5 | +4.2 (-3.1 to +12.0) | 11.5%, 7.8% |
+
+**The dimension fix worked; the contract fix did not.**
+
+| Targeted questions, full context, both models | Runs correct before | After |
+|---|---|---|
+| Point-in-time dimension (`paying_ent_sep26`, `x_avg_plus_seats_q3`) | 2 of 12 | 11 of 12 |
+| Contract ARR (`x_contract_arr_2025`, `x_nb_arr_2026`) | 2 of 12 | 1 of 12 |
+
+With full context, Haiku still answered "UNAVAILABLE" on `x_contract_arr_2025` in 3 of 3 runs, after 15
+to 17 tool calls, while it answered correctly in 3 of 3 runs with docs, where there is no endorsement
+ranking or metric index. Describing the intermediate model better and loosening the prompt was not enough
+to overcome the full layer's pull toward governed metrics and endorsed marts. The likely durable fix is
+structural: publish contracts as an endorsed mart or a governed metric, so the information sits where the
+full-context agent already looks. That change is not tested here.
+
+**No regressions outside the targets.** Accuracy on the 59 untargeted questions moved from 100.0% to 99.4%
+for Haiku with full context (one question, 1 of 3 runs) and from 88.1% to 89.8% for Gemma. Overall changes
+are inside their intervals for both models, so this follow-up shows the targeted effect, not an overall
+accuracy gain.
+
+**Small context edits move a local model a lot.** Between the two runs, Gemma's docs-level score changed on
+25 of 64 questions, 13 up and 12 down, although docs changed only four column descriptions and the
+`int_contracts` description. Within each run Gemma mostly repeated itself (repetitions disagreed on 5% of
+docs questions in the rerun), so at temperature 0 repetitions understate how sensitive a local model is to
+prompt wording. Haiku changed on 2 questions at docs and 5 at full. A practical consequence: a single
+before/after run is not enough to judge a context change for a local model; compare many questions and
+read per-question changes, as `compare_runs.py` does.
+
+The fixed context layer is a modest, honest improvement and is kept. Phase 2 results above remain the
+primary results because the questions and analysis were fixed before that run; this follow-up was
+designed after seeing its errors.
 
 ## Limitations
 
@@ -210,8 +263,9 @@ make bench-smoke
 uv run python evals/benchmark.py --run-id phase2 --models anthropic:claude-haiku-5-5 --repetitions 3 --cost-cap 8
 uv run python evals/benchmark.py --run-id phase2 --models ollama:gemma4:26b --repetitions 3
 make analyze
+make bench-v2            # follow-up: rerun docs and full after the context fixes, then compare
 ```
 
 Raw results: `evals/results/phase2/runs.jsonl` (one row per execution) and `manifest.json` (model
 digests, quantization, package versions, git commit, and settings). Full tables:
-`evals/results/phase2/summary.md`.
+`evals/results/phase2/summary.md`. Follow-up run: `evals/results/phase2-v2/`.
