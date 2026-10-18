@@ -2,8 +2,9 @@
 
 The benchmark scored every run locally (evals/results/*/runs.jsonl) but never
 sent the score to LangSmith, so dashboards there cannot chart accuracy. This
-script matches each jsonl row to its root trace and writes feedback
-`correct` = 1/0, with the scorer's reason as the comment.
+script matches each jsonl row to its root trace and writes two feedback keys:
+`correct` = 1/0 with the scorer's reason as the comment, and categorical
+`outcome` = correct / wrong / step_limit for charts grouped by outcome.
 
 Match key: (run_id, model, level, qid, rep)
   - run_id, model, level come from the trace tags run:<id>, model:<m>, context:<lvl>
@@ -79,7 +80,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("runs", nargs="*", default=DEFAULT_RUNS, help="runs.jsonl files (default: phase2 and phase2-v2)")
     ap.add_argument("--project", default="agent-ready-analytics")
-    ap.add_argument("--key", default="correct", help="feedback key")
+    ap.add_argument("--key", default="correct", help="numeric feedback key (1/0)")
+    ap.add_argument("--outcome-key", default="outcome", help="categorical feedback key: correct / wrong / step_limit")
     ap.add_argument("--apply", action="store_true", help="write feedback (default is a dry run)")
     ap.add_argument("--extend-retention", action="store_true", help="also upgrade traces to long-lived retention (billed)")
     ap.add_argument("--replace", action="store_true",
@@ -151,36 +153,40 @@ def main() -> int:
         print("\nDry run. Re-run with --apply to write feedback.")
         return 0
 
-    def write(pair):
-        r, run = pair
-        fid = uuid.uuid5(NAMESPACE, f"{args.key}|{run.id}")
+    def outcome(r) -> str:
+        return "step_limit" if r["status"] in ("recursion_limit", "error") else ("correct" if r["correct"] else "wrong")
+
+    def put(run, key, **fb) -> str:
+        fid = uuid.uuid5(NAMESPACE, f"{key}|{run.id}")
+        if args.replace:
+            try:
+                client.delete_feedback(fid)
+            except Exception as e:  # nothing to delete is fine
+                if "404" not in str(e) and "not found" not in str(e).lower():
+                    return f"error: delete {str(e)[:200]}"
         try:
-            if args.replace:
-                try:
-                    client.delete_feedback(fid)
-                except Exception as e:  # nothing to delete is fine
-                    if "404" not in str(e) and "not found" not in str(e).lower():
-                        return f"error: delete {str(e)[:200]}"
             # session_id and start_time let LangSmith's chart queries join feedback to the trace.
-            client.create_feedback(
-                run.id, args.key, score=int(r["correct"]), comment=r.get("reason"),
-                trace_id=run.trace_id or run.id, feedback_id=fid,
-                session_id=run.session_id, start_time=run.start_time,
-                extend_trace_retention=args.extend_retention,
-            )
-            return "replaced" if args.replace else "created"
+            client.create_feedback(run.id, key, trace_id=run.trace_id or run.id, feedback_id=fid,
+                                   session_id=run.session_id, start_time=run.start_time,
+                                   extend_trace_retention=args.extend_retention, **fb)
+            return f"{key}: {'replaced' if args.replace else 'created'}"
         except Exception as e:  # existing id -> conflict; anything else is reported
             msg = str(e)
-            return "exists" if ("409" in msg or "already exists" in msg.lower()) else f"error: {msg[:200]}"
+            return f"{key}: exists" if ("409" in msg or "already exists" in msg.lower()) else f"error: {msg[:200]}"
+
+    def write(pair):
+        r, run = pair
+        return [put(run, args.key, score=int(r["correct"]), comment=r.get("reason")),
+                put(run, args.outcome_key, value=outcome(r))]
 
     results = Counter()
     errors = []
     with ThreadPoolExecutor(args.workers) as pool:
         for fut in as_completed(pool.submit(write, p) for p in matched):
-            res = fut.result()
-            results[res if not res.startswith("error") else "error"] += 1
-            if res.startswith("error"):
-                errors.append(res)
+            for res in fut.result():
+                results[res if not res.startswith("error") else "error"] += 1
+                if res.startswith("error"):
+                    errors.append(res)
     print(dict(results))
     for e in errors[:5]:
         print(" ", e)
