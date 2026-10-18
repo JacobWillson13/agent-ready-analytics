@@ -1,121 +1,92 @@
 {
-  "title": "Phase 2 benchmark: model x context",
-  "description": "Lanternfly Labs data agent. 64 questions x 3 context levels x 2 models x 3 reps. Phase 2 (Oct 16) and the context-fix rerun phase2-v2 (Oct 17). Accuracy comes from the backfilled 'correct' feedback.",
+  "title": "Agent benchmark: model x context",
+  "description": "Lanternfly Labs data agent. Phase 1: Sonnet 5.5, 25 core questions, LangSmith experiments. Phase 2: Haiku 5.5 and Gemma 4 26B, 64 questions x 3 contexts x 3 reps, plus the context-fix rerun (phase2-v2).",
   "project": "agent-ready-analytics",
   "feedback_key": "correct",
-  "window": {
-    "start": "2026-10-16T16:00:00Z",
-    "end": "2026-10-18T03:00:00Z"
-  },
+  "outcome_key": "outcome",
+  "window": {"start": "2026-10-01T00:00:00Z", "end": "2026-10-18T03:00:00Z"},
   "models": {
     "Haiku": "anthropic:claude-haiku-5-5",
     "Gemma": "ollama:gemma4:26b"
   },
-  "outcomes": {
-    "correct": "eq(feedback_score, 1)",
-    "wrong": "and(eq(feedback_score, 0), eq(status, \"success\"))",
-    "step_limit": "eq(status, \"error\")"
+  "phase1": {
+    "pattern": "^context-(raw|docs|full)-[0-9a-f]{8}$",
+    "min_scored_runs": 25,
+    "pin": {"raw": null, "docs": null, "full": null}
   },
-  "charts": [
+  "rows": [
     {
-      "chart_type": "text",
-      "markdown": "### Does governed context matter more than the model?\nYes. With only raw tables, Haiku answers 66% correctly. With the governed context layer, local Gemma 4 26B reaches 83%, and Haiku reaches 99%.\n\nThe two models peak on different layers. Haiku is best with **docs** (99.5%), and Gemma is best with **full** (83.3%) because the semantic layer cuts its tool-call loops."
-    },
-    {
-      "title": "Phase 2 runs",
-      "chart_type": "kpi",
-      "series": [{"name": "Runs", "run": "phase2", "metric": "run_count"}]
-    },
-    {
-      "title": "Haiku API cost, Phase 2",
-      "chart_type": "kpi",
-      "description": "Gemma ran locally on an RTX 3090, so it has no API cost.",
-      "series": [{"name": "Cost", "run": "phase2", "model": "Haiku", "metric": "total_cost"}]
-    },
-    {
-      "title": "Accuracy by model and context (Phase 2)",
-      "chart_type": "bar",
-      "description": "Share of runs scored correct against the held-out answer key.",
-      "series": [
-        {"name": "Haiku raw",  "run": "phase2", "model": "Haiku", "level": "raw",  "metric": "feedback_score_avg"},
-        {"name": "Haiku docs", "run": "phase2", "model": "Haiku", "level": "docs", "metric": "feedback_score_avg"},
-        {"name": "Haiku full", "run": "phase2", "model": "Haiku", "level": "full", "metric": "feedback_score_avg"},
-        {"name": "Gemma raw",  "run": "phase2", "model": "Gemma", "level": "raw",  "metric": "feedback_score_avg"},
-        {"name": "Gemma docs", "run": "phase2", "model": "Gemma", "level": "docs", "metric": "feedback_score_avg"},
-        {"name": "Gemma full", "run": "phase2", "model": "Gemma", "level": "full", "metric": "feedback_score_avg"}
+      "height": 0.6,
+      "items": [
+        {"width": 40, "chart_type": "text",
+         "markdown": "### Governed context beats a bigger model\nRaw tables: Haiku 66%, Gemma 23%. With the context layer: Haiku 99.5% (docs), local Gemma 83% (full). Sonnet in Phase 1 went from 76% to 100% on the original questions."},
+        {"width": 20, "title": "Phase 2 runs", "chart_type": "kpi",
+         "series": {"name": "Runs", "run": "phase2", "metric": "run_count"}},
+        {"width": 20, "title": "Haiku cost, 576 runs", "chart_type": "kpi",
+         "description": "Phase 2. Gemma ran locally on an RTX 3090.",
+         "series": {"name": "Cost", "run": "phase2", "model": "Haiku", "metric": "total_cost"}},
+        {"width": 20, "title": "Sonnet cost, Phase 1", "chart_type": "kpi",
+         "series": {"name": "Cost", "source": "phase1", "metric": "total_cost"}}
       ]
     },
     {
-      "title": "Outcomes: Haiku (Phase 2)",
-      "chart_type": "pie",
-      "series": [
-        {"name": "Correct",    "run": "phase2", "model": "Haiku", "outcome": "correct",    "metric": "run_count"},
-        {"name": "Wrong",      "run": "phase2", "model": "Haiku", "outcome": "wrong",      "metric": "run_count"},
-        {"name": "Step limit", "run": "phase2", "model": "Haiku", "outcome": "step_limit", "metric": "run_count"}
+      "height": 1,
+      "items": [
+        {"width": 33, "title": "Haiku accuracy by context", "chart_type": "top-k",
+         "description": "Phase 2, all 64 questions, 3 reps.",
+         "series": {"name": "Accuracy", "run": "phase2", "model": "Haiku", "metric": "feedback_score_avg", "group_by": "context_level"}},
+        {"width": 33, "title": "Gemma accuracy by context", "chart_type": "top-k",
+         "description": "Phase 2, local on an RTX 3090.",
+         "series": {"name": "Accuracy", "run": "phase2", "model": "Gemma", "metric": "feedback_score_avg", "group_by": "context_level"}},
+        {"width": 34, "title": "Sonnet accuracy by context (Phase 1)", "chart_type": "top-k",
+         "description": "25 core questions, one rep. Bars are the raw, docs and full experiments.",
+         "series": {"name": "Accuracy", "source": "phase1", "metric": "feedback_score_avg", "group_by": "project"}}
       ]
     },
     {
-      "title": "Outcomes: Gemma (Phase 2)",
-      "chart_type": "pie",
-      "series": [
-        {"name": "Correct",    "run": "phase2", "model": "Gemma", "outcome": "correct",    "metric": "run_count"},
-        {"name": "Wrong",      "run": "phase2", "model": "Gemma", "outcome": "wrong",      "metric": "run_count"},
-        {"name": "Step limit", "run": "phase2", "model": "Gemma", "outcome": "step_limit", "metric": "run_count"}
+      "height": 1,
+      "items": [
+        {"width": 33, "title": "Gemma outcomes", "chart_type": "pie",
+         "description": "Phase 2. Haiku never hit the step limit.",
+         "series": {"name": "Runs", "run": "phase2", "model": "Gemma", "metric": "run_count", "group_by": "outcome"}},
+        {"width": 33, "title": "Gemma on the 33 hard questions", "chart_type": "top-k",
+         "description": "The semantic layer matters most on multi-step questions.",
+         "series": {"name": "Accuracy", "run": "phase2", "model": "Gemma", "split": "hard", "metric": "feedback_score_avg", "group_by": "context_level"}},
+        {"width": 34, "title": "Context fix: Gemma, full context", "chart_type": "top-k",
+         "description": "phase2 = original context, phase2-v2 = dimension-description and contract-ARR doc fixes.",
+         "series": {"name": "Accuracy", "model": "Gemma", "level": "full", "metric": "feedback_score_avg", "group_by": "run_id"}}
       ]
     },
     {
-      "title": "Step-limit rate by context (Gemma)",
-      "chart_type": "bar",
-      "description": "Runs that hit the 60-step LangGraph limit. Haiku never did.",
-      "series": [
-        {"name": "Gemma raw",  "run": "phase2", "model": "Gemma", "level": "raw",  "metric": "error_rate"},
-        {"name": "Gemma docs", "run": "phase2", "model": "Gemma", "level": "docs", "metric": "error_rate"},
-        {"name": "Gemma full", "run": "phase2", "model": "Gemma", "level": "full", "metric": "error_rate"}
+      "height": 1,
+      "items": [
+        {"width": 33, "title": "Haiku median tokens per run", "chart_type": "top-k",
+         "description": "Raw tables cost about 3x the tokens of docs or full.",
+         "series": {"name": "Tokens", "run": "phase2", "model": "Haiku", "metric": "median_tokens", "group_by": "context_level"}},
+        {"width": 33, "title": "Gemma median tokens per run", "chart_type": "top-k",
+         "series": {"name": "Tokens", "run": "phase2", "model": "Gemma", "metric": "median_tokens", "group_by": "context_level"}},
+        {"width": 34, "title": "Sonnet median tokens per run (Phase 1)", "chart_type": "top-k",
+         "series": {"name": "Tokens", "source": "phase1", "metric": "median_tokens", "group_by": "project"}}
       ]
     },
     {
-      "title": "Median tokens per run",
-      "chart_type": "bar",
-      "description": "Raw context costs Haiku about 3x the tokens of docs or full.",
-      "series": [
-        {"name": "Haiku raw",  "run": "phase2", "model": "Haiku", "level": "raw",  "metric": "median_tokens"},
-        {"name": "Haiku docs", "run": "phase2", "model": "Haiku", "level": "docs", "metric": "median_tokens"},
-        {"name": "Haiku full", "run": "phase2", "model": "Haiku", "level": "full", "metric": "median_tokens"},
-        {"name": "Gemma raw",  "run": "phase2", "model": "Gemma", "level": "raw",  "metric": "median_tokens"},
-        {"name": "Gemma docs", "run": "phase2", "model": "Gemma", "level": "docs", "metric": "median_tokens"},
-        {"name": "Gemma full", "run": "phase2", "model": "Gemma", "level": "full", "metric": "median_tokens"}
+      "height": 1,
+      "items": [
+        {"width": 33, "title": "Haiku median latency (s)", "chart_type": "top-k",
+         "series": {"name": "Latency", "run": "phase2", "model": "Haiku", "metric": "latency_p50", "group_by": "context_level"}},
+        {"width": 33, "title": "Gemma step-limit rate", "chart_type": "top-k",
+         "description": "Runs that hit the 60-step LangGraph limit.",
+         "series": {"name": "Step limit", "run": "phase2", "model": "Gemma", "metric": "error_rate", "group_by": "context_level"}},
+        {"width": 34, "title": "Context fix: Haiku, full context", "chart_type": "top-k",
+         "series": {"name": "Accuracy", "model": "Haiku", "level": "full", "metric": "feedback_score_avg", "group_by": "run_id"}}
       ]
     },
     {
-      "title": "Median latency (s)",
-      "chart_type": "bar",
-      "series": [
-        {"name": "Haiku raw",  "run": "phase2", "model": "Haiku", "level": "raw",  "metric": "latency_p50"},
-        {"name": "Haiku docs", "run": "phase2", "model": "Haiku", "level": "docs", "metric": "latency_p50"},
-        {"name": "Haiku full", "run": "phase2", "model": "Haiku", "level": "full", "metric": "latency_p50"},
-        {"name": "Gemma raw",  "run": "phase2", "model": "Gemma", "level": "raw",  "metric": "latency_p50"},
-        {"name": "Gemma docs", "run": "phase2", "model": "Gemma", "level": "docs", "metric": "latency_p50"},
-        {"name": "Gemma full", "run": "phase2", "model": "Gemma", "level": "full", "metric": "latency_p50"}
+      "height": 0.5,
+      "items": [
+        {"width": 100, "chart_type": "text",
+         "markdown": "**Notes.** Phase 2 charts count only root traces that carry the backfilled `correct` feedback, so they match `evals/results/*/runs.jsonl`. Cost uses LangSmith's model price map, which can differ slightly from the harness's own cost. Latency is trace duration. Confidence intervals and per-trap results are in `docs/REPORT.md`."}
       ]
-    },
-    {
-      "title": "Context-fix rerun: accuracy before and after",
-      "chart_type": "bar",
-      "description": "phase2 = original context, phase2-v2 = dimension-description and contract-ARR doc fixes. Raw context was not rerun.",
-      "series": [
-        {"name": "Haiku full, before", "run": "phase2",    "model": "Haiku", "level": "full", "metric": "feedback_score_avg"},
-        {"name": "Haiku full, after",  "run": "phase2-v2", "model": "Haiku", "level": "full", "metric": "feedback_score_avg"},
-        {"name": "Gemma full, before", "run": "phase2",    "model": "Gemma", "level": "full", "metric": "feedback_score_avg"},
-        {"name": "Gemma full, after",  "run": "phase2-v2", "model": "Gemma", "level": "full", "metric": "feedback_score_avg"},
-        {"name": "Haiku docs, before", "run": "phase2",    "model": "Haiku", "level": "docs", "metric": "feedback_score_avg"},
-        {"name": "Haiku docs, after",  "run": "phase2-v2", "model": "Haiku", "level": "docs", "metric": "feedback_score_avg"},
-        {"name": "Gemma docs, before", "run": "phase2",    "model": "Gemma", "level": "docs", "metric": "feedback_score_avg"},
-        {"name": "Gemma docs, after",  "run": "phase2-v2", "model": "Gemma", "level": "docs", "metric": "feedback_score_avg"}
-      ]
-    },
-    {
-      "chart_type": "text",
-      "markdown": "**Notes.** Charts include only root traces that carry the `correct` feedback, so the counts match `evals/results/*/runs.jsonl` exactly. Latency is LangSmith's trace duration and runs slightly above the harness's `latency_s`. Bootstrap confidence intervals and per-trap accuracy are in the benchmark report and figures, not here."
     }
   ]
 }

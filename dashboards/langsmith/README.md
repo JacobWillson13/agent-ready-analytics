@@ -1,33 +1,47 @@
 # LangSmith dashboard
 
-The Phase 2 benchmark dashboard, defined as code. `dashboard.json` is the spec; `push_dashboard.py` builds it through the LangSmith REST API, so nothing is configured by hand.
+The benchmark dashboard, defined as code. `dashboard.json` is the spec: rows of charts with relative widths and heights. `push_dashboard.py` builds the charts and the grid layout through the LangSmith REST API, then reads every chart back and checks the Phase 2 numbers against `evals/results/*/runs.jsonl`.
 
-## Why a backfill step
+## What it shows
 
-The benchmark scored each run locally and wrote the result to `evals/results/*/runs.jsonl`. LangSmith never received those scores, so it can't chart accuracy. `backfill_feedback.py` attaches each score to its trace as feedback key `correct` (1 or 0). It matches on the trace tags `run:`, `model:` and `context:`, plus the `qid` and `rep` metadata.
+It's laid out as two screenshots.
 
-Every chart filters on traces that carry this feedback. Aborted attempts that were traced but never logged therefore drop out, and the dashboard's counts match the jsonl exactly.
+1. **Accuracy.**
+   - A headline row: findings, Phase 2 run count, Haiku cost and Sonnet cost.
+   - Accuracy by context for Haiku, Gemma and Sonnet (Phase 1).
+   - Gemma's outcomes (correct, wrong, step limit), Gemma on the 33 hard questions, and the context fix for Gemma.
+2. **Efficiency.**
+   - Median tokens by context for each model.
+   - Haiku latency, Gemma's step-limit rate, and the context fix for Haiku.
+   - A notes row.
+
+## Data sources
+
+- **Phase 2:** the benchmark scored runs locally, so `backfill_feedback.py` attaches two feedback keys to each root trace. `correct` is 1 or 0, and `outcome` is correct, wrong or step_limit. Runs are matched on the `run:`, `model:` and `context:` tags plus the `qid` and `rep` metadata. Every Phase 2 chart filters on `correct`, so aborted, never-logged attempts drop out.
+- **Phase 1 (Sonnet):** the `context-raw|docs|full-<hash>` LangSmith experiments, which `evals/run_evals.py` already scored as `correct`. The push script picks the earliest fully scored experiment per level, which is the original Phase 1 run. To use a different one, set its name in `phase1.pin`. `--list-experiments` shows the candidates.
 
 ## Run order
 
 ```
 source ~/.config/ara/env
-uv run python dashboards/langsmith/backfill_feedback.py            # dry run: expect 1920 matched, 0 missing
-uv run python dashboards/langsmith/backfill_feedback.py --apply
-uv run python dashboards/langsmith/push_dashboard.py --check       # LangSmith vs jsonl, chart by chart
-uv run python dashboards/langsmith/push_dashboard.py               # create or replace the dashboard
+uv run python dashboards/langsmith/backfill_feedback.py                    # dry run
+uv run python dashboards/langsmith/backfill_feedback.py --apply --replace  # writes correct + outcome
+uv run python dashboards/langsmith/push_dashboard.py                       # create, lay out, check
 ```
 
-Both scripts default to `evals/results/phase2/runs.jsonl` and `evals/results/phase2-v2/runs.jsonl`. To use other files, pass the paths as separate arguments. Don't pass them through a shell variable: zsh doesn't split a variable on spaces.
+Then open LangSmith, go to Monitoring, and open "Agent benchmark: model x context". Set the time range to cover the Phase 1 dates the script prints through 2026-10-18.
 
-Then open LangSmith, go to Monitoring, and open "Phase 2 benchmark: model x context". Set the time range to 2026-10-16 16:00 through 2026-10-18 03:00 UTC.
+## Chart rules learned the hard way
+
+- `bar` is always a stacked bar, so several series pile into one column.
+- `top-k` (ranked bar), `pie` (donut) and `table` keep only one series. To compare, use one series plus `group_by`: `context_level`, `run_id` or `split` (trace metadata), `project`, or `outcome` (feedback label).
+- The API accepts only V2 series (`metric_definition` + `filter_definition`) and needs `common_filters.session`.
+- Run filters can't `or()` across tag comparisons.
+- Feedback must carry the trace's `session_id`, or chart queries can't join it to the trace.
 
 ## Notes
 
-- **Retention.** The SDK upgrades a trace to long-lived retention, which is billed, whenever feedback is added, unless told not to. The backfill turns that off. Add `--extend-retention` only if you want the traces kept past the 14-day base retention.
-- **Diagnosing empty charts.** `push_dashboard.py --diagnose` counts Phase 2 Haiku raw runs while adding one filter clause at a time. The first step that drops to 0 is the clause LangSmith's chart engine can't evaluate.
-- **Feedback needs `session_id`.** Feedback created without the trace's project (`session_id`) doesn't join to traces in chart queries. If an older run of the backfill wrote feedback without it, rerun with `--apply --replace`.
-- **Re-running is safe.** Feedback ids are deterministic, so existing feedback is skipped. `push_dashboard.py` deletes and recreates the dashboard with the same title.
-- **Changing a chart.** Edit `dashboard.json`, then rerun the push. Charts use LangSmith's V2 series format (`metric_definition` and `filter_definition`), because the API rejects V1 series. Supported metrics are listed in `metric_definition()` in `push_dashboard.py`. Valid chart types are `line`, `bar`, `table`, `kpi`, `top-k`, `pie` and `text`.
+- **Retention.** The SDK upgrades a trace to long-lived retention, which is billed, whenever feedback is added, unless told not to. The backfill turns that off. Add `--extend-retention` only if you want the Phase 2 traces kept past the 14-day base retention.
+- **Layout.** Widths are percentages of a row, and heights are relative to LangSmith's default row height. The script scales both from the default layout it reads back. `--no-layout` keeps the default grid.
 - **Format retries.** `agent/graph.py` invokes a format retry separately, tagged only `format_retry`, so it lands as its own trace. The filters exclude those traces. The 7 affected rows keep their final score on the first trace, but that trace's latency and token count leave out the retry.
-- **Haiku cost** comes from LangSmith's model price map. If Haiku 5.5 isn't in that map, the cost tile shows $0, and `--check` will reveal it (the jsonl total is $2.84).
+- **Cost** comes from LangSmith's model price map, so it can differ slightly from the harness's own cost. LangSmith shows $2.7 for Haiku's Phase 2 runs; the jsonl total is $2.84.
