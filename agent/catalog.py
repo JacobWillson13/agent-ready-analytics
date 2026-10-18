@@ -39,16 +39,24 @@ def metrics() -> list[dict]:
             for m in sm["metrics"]]
 
 
-def dimensions() -> list[str]:
-    """Group-by names MetricFlow accepts, e.g. customer__region, org__deployment_type, metric_time__month."""
+def dimension_docs() -> dict[str, str]:
+    """Categorical group-by names MetricFlow accepts (e.g. customer__region) with their one-line descriptions.
+    The description is what tells an agent whether a dimension is today's value or the value at the time."""
     sm = semantic_manifest()
-    out = {"metric_time__day", "metric_time__week", "metric_time__month", "metric_time__quarter", "metric_time__year"}
+    out = {}
     for s in sm["semantic_models"]:
         prim = next((e["name"] for e in s["entities"] if e["type"] == "primary"), None)
         for d in s["dimensions"]:
             if prim and d["type"] == "categorical":
-                out.add(f"{prim}__{d['name']}")
-    return sorted(out)
+                desc = " ".join((d.get("description") or "").split())
+                out[f"{prim}__{d['name']}"] = desc
+    return dict(sorted(out.items()))
+
+
+def dimensions() -> list[str]:
+    """Group-by names MetricFlow accepts, e.g. customer__region, org__deployment_type, metric_time__month."""
+    time = ["metric_time__day", "metric_time__week", "metric_time__month", "metric_time__quarter", "metric_time__year"]
+    return sorted(set(time) | set(dimension_docs()))
 
 
 def guides() -> dict[str, str]:

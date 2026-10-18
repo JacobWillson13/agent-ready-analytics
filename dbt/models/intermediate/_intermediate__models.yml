@@ -7,7 +7,12 @@ models:
       - name: org_id
         data_tests: [unique, not_null]
   - name: int_contracts
-    description: Closed-won opportunities with term length and annualized ARR.
+    description: >
+      Contract-level ARR. Grain: one row per closed-won enterprise contract (New Business,
+      Expansion, Renewal) with start and end dates, term length, total contract value, and
+      annualized ARR. The source for questions about contracts themselves, such as ARR of
+      contracts that started in a period or by contract type. For ARR at a point in time,
+      use fct_arr_monthly.
     columns:
       - name: contract_id
         data_tests: [unique, not_null]
