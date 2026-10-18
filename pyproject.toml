@@ -1,6 +1,7 @@
 [project]
 name = "agent-ready-analytics"
 version = "0.3.0"
+license = "MIT"
 description = "Benchmark of how a governed context layer (dbt, MetricFlow, guides) changes data agent accuracy across an API model and a local model"
 requires-python = ">=3.12,<3.14"
 dependencies = [
