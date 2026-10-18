@@ -1,5 +1,8 @@
 {
   "title": "Agent benchmark: model x context",
+  "retired_titles": [
+    "Phase 2 benchmark: model x context"
+  ],
   "description": "Lanternfly Labs data agent. Phase 1: Sonnet 5.5, 25 core questions, LangSmith experiments. Phase 2: Haiku 5.5 and Gemma 4 26B, 64 questions x 3 contexts x 3 reps, plus the context-fix rerun (phase2-v2).",
   "project": "agent-ready-analytics",
   "feedback_key": "correct",

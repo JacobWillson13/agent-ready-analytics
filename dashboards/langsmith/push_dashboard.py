@@ -2,12 +2,15 @@
 
 Builds every chart through the LangSmith REST API (/api/v1/charts/...), so the
 dashboard lives in version control instead of being clicked together. Running it
-again replaces the dashboard with the same title. Charts appear in spec order on
-LangSmith's two-column grid.
+again updates the existing charts in place (same ids), so panel sizes you set in
+LangSmith are kept. --save-layout stores those sizes in layout.json, and a full
+--recreate restores them.
 
   uv run python dashboards/langsmith/push_dashboard.py --dry-run           # print payloads, no API calls
   uv run python dashboards/langsmith/push_dashboard.py --list-experiments  # Phase 1 candidates
-  uv run python dashboards/langsmith/push_dashboard.py                     # create or replace
+  uv run python dashboards/langsmith/push_dashboard.py                     # update in place (keeps panel sizes)
+  uv run python dashboards/langsmith/push_dashboard.py --save-layout       # save your panel sizes to layout.json
+  uv run python dashboards/langsmith/push_dashboard.py --recreate          # full rebuild, restores layout.json
 
 Spec notes
 - LangSmith's `bar` is always stacked, and `top-k` (ranked bar), `pie` (donut) and
@@ -170,20 +173,91 @@ def print_experiments(cands: list, chosen: dict | None = None) -> None:
 
 # ---------- main ----------
 
+# ---------- dashboard sync ----------
+
+LAYOUT = Path(__file__).with_name("layout.json")
+
+
+def chart_keys(charts: list[dict]) -> list[str]:
+    """Stable keys: a chart's title, or text#N for the Nth text block."""
+    keys, n = [], 0
+    for c in charts:
+        if c.get("chart_type") == "text":
+            keys.append(f"text#{n}")
+            n += 1
+        else:
+            keys.append(c["title"])
+    return keys
+
+
+def find_section(api, title: str) -> dict | None:
+    res = api.call("POST", "/api/v1/charts", json={"omit_data": True})
+    return next((s for s in res.get("sections", []) if s.get("title") == title), None)
+
+
+def existing_by_key(sec: dict) -> dict:
+    charts = sorted(sec.get("charts") or [], key=lambda c: c.get("index") or 0)
+    return dict(zip(chart_keys(charts), charts))
+
+
+def save_layout(sec: dict) -> int:
+    layout = sec.get("layout")
+    if not layout:
+        print("This dashboard has no saved layout yet. Resize or move one panel in LangSmith, then rerun.")
+        return 1
+    key_of = {c["id"]: k for k, c in existing_by_key(sec).items()}
+    for bp in layout.get("breakpoints", {}).values():
+        for row in bp.get("rows", []):
+            for item in row.get("items", []):
+                item["chart"] = key_of.get(item.pop("chart_id"), "?")
+    LAYOUT.write_text(json.dumps(layout, indent=2) + "\n")
+    print(f"saved layout to {LAYOUT} (commit it so a full rebuild keeps your panel sizes)")
+    return 0
+
+
+def apply_layout(api, sec_id: str, id_of: dict) -> None:
+    if not LAYOUT.exists():
+        return
+    layout = json.loads(LAYOUT.read_text())
+    for bp in layout.get("breakpoints", {}).values():
+        rows = []
+        for row in bp.get("rows", []):
+            items = [{"chart_id": id_of[i["chart"]], "width_units": i["width_units"]}
+                     for i in row.get("items", []) if i.get("chart") in id_of]
+            if items:
+                rows.append({"height_units": row["height_units"], "items": items})
+        bp["rows"] = rows
+    api.call("PATCH", f"/api/v1/charts/section/{sec_id}", json={"layout": layout})
+    print(f"applied saved layout from {LAYOUT.name}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--spec", type=Path, default=SPEC)
     ap.add_argument("--dry-run", action="store_true", help="print payloads only")
     ap.add_argument("--list-experiments", action="store_true", help="list Phase 1 experiment candidates")
+    ap.add_argument("--save-layout", action="store_true",
+                    help="save the dashboard's current panel sizes and order to layout.json")
+    ap.add_argument("--recreate", action="store_true",
+                    help="delete and rebuild the dashboard (restores layout.json if present)")
+    ap.add_argument("--prune", action="store_true", help="delete dashboard charts that are no longer in the spec")
     args = ap.parse_args()
     spec = json.loads(args.spec.read_text())
     charts = charts_in_order(spec)
+    keys = chart_keys(charts)
 
     if args.dry_run:
         ids = {"project": "<project_id>", "phase1": ["<raw_exp>", "<docs_exp>", "<full_exp>"]}
         print(json.dumps({"charts": [chart_payload(spec, c, i, ids, "<section_id>") for i, c in enumerate(charts)]},
                          indent=2))
         return 0
+
+    api = Api()
+    if args.save_layout:
+        sec = find_section(api, spec["title"])
+        if not sec:
+            raise RuntimeError(f"No dashboard titled {spec['title']!r}.")
+        return save_layout(sec)
 
     cands = experiment_candidates(spec)
     if args.list_experiments:
@@ -192,25 +266,60 @@ def main() -> int:
     chosen = pick_phase1(spec, cands)
     print("Phase 1 experiments (* = used; pin others in dashboard.json -> phase1.pin):")
     print_experiments(cands, chosen)
-
-    api = Api()
     ids = {"project": api.project_id(spec["project"]), "phase1": [chosen[l]["id"] for l in ("raw", "docs", "full")]}
 
-    for sec in api.call("GET", "/api/v1/charts/section", params={"title_contains": spec["title"], "limit": 100}):
-        if sec["title"] == spec["title"]:
-            api.call("DELETE", f"/api/v1/charts/section/{sec['id']}")
-            print(f"deleted old dashboard {sec['id']}")
-    sec = api.call("POST", "/api/v1/charts/section", json={"title": spec["title"], "description": spec["description"]})
-    chart_ids = []
-    try:
-        for i, chart in enumerate(charts):
-            res = api.call("POST", "/api/v1/charts/create", json=chart_payload(spec, chart, i, ids, sec["id"]))
-            chart_ids.append(res["id"])
-    except RuntimeError as e:
+    for old_title in spec.get("retired_titles", []):
+        old = find_section(api, old_title)
+        if old:
+            api.call("DELETE", f"/api/v1/charts/section/{old['id']}")
+            print(f"deleted retired dashboard {old_title!r}")
+
+    sec = find_section(api, spec["title"])
+    if sec and args.recreate:
         api.call("DELETE", f"/api/v1/charts/section/{sec['id']}")
-        print(f"failed on block {i} ({chart.get('title', 'text')}); removed the partial dashboard\n{e}")
-        return 1
-    print(f"created dashboard {sec['id']} with {len(chart_ids)} blocks")
+        print(f"deleted dashboard {sec['id']} for a full rebuild")
+        sec = None
+
+    if sec is None:
+        sec = api.call("POST", "/api/v1/charts/section",
+                       json={"title": spec["title"], "description": spec["description"]})
+        id_of = {}
+        try:
+            for i, (key, chart) in enumerate(zip(keys, charts)):
+                id_of[key] = api.call("POST", "/api/v1/charts/create",
+                                      json=chart_payload(spec, chart, i, ids, sec["id"]))["id"]
+        except RuntimeError as e:
+            api.call("DELETE", f"/api/v1/charts/section/{sec['id']}")
+            print(f"failed on {key!r}; removed the partial dashboard\n{e}")
+            return 1
+        print(f"created dashboard {sec['id']} with {len(id_of)} blocks")
+        apply_layout(api, sec["id"], id_of)
+    else:
+        have = existing_by_key(sec)
+        if not have:
+            raise RuntimeError("Found the dashboard but could not read its charts; not touching it. "
+                               "Use --recreate to rebuild it.")
+        updated = created = 0
+        for i, (key, chart) in enumerate(zip(keys, charts)):
+            payload = chart_payload(spec, chart, i, ids, sec["id"])
+            if key in have:
+                # Same chart id, so LangSmith keeps its panel size and position.
+                payload.pop("index", None)
+                payload.pop("section_id", None)
+                api.call("PATCH", f"/api/v1/charts/{have[key]['id']}", json=payload)
+                updated += 1
+            else:
+                api.call("POST", "/api/v1/charts/create", json=payload)
+                created += 1
+                print(f"  added {key!r} (new panel; place it in LangSmith, then --save-layout)")
+        stale = [k for k in have if k not in keys]
+        for k in stale:
+            if args.prune:
+                api.call("DELETE", f"/api/v1/charts/{have[k]['id']}")
+                print(f"  deleted {k!r}")
+            else:
+                print(f"  {k!r} is not in the spec (kept; --prune deletes it)")
+        print(f"updated dashboard in place: {updated} updated, {created} added; panel sizes untouched")
 
     host = api.base.replace("api.smith", "smith")
     print(f"\nopen: {host}  ->  Monitoring  ->  {spec['title']}")
