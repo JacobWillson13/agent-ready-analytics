@@ -58,6 +58,23 @@ statistical intervals, because Phase 1's 100% results could not separate the con
 
 ## What it looks like
 
+**Same question, with and without the context layer.** "What was net new ARR in Q3 2026?" The answer is
+$6.59M. With raw source tables, Haiku made 20 tool calls and built a careful, well-documented estimate from
+Salesforce bookings and Metronome invoices: $3.50M, about half the true value, because bookings and invoices
+are not ARR. With full context, the agent read two values of the governed `arr` metric and subtracted them in
+3 tool calls.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/trajectory-nnarr-raw.png" alt="Haiku with raw tables: 20 tool calls, answers 3,496,247"></td>
+<td width="50%"><img src="docs/screenshots/trajectory-nnarr-full.png" alt="Full context: 3 tool calls, answers 6,594,681.27"></td>
+</tr>
+<tr>
+<td>Raw tables: 20 tool calls, $3.50M (wrong)</td>
+<td>Full context: 3 tool calls, $6.59M (correct)</td>
+</tr>
+</table>
+
 **The defect, in a trace.** Asked how many enterprise customers were paying at the end of September 2026,
 Haiku with full context grouped the governed `paying_customers` metric by `customer__motion`, which is each
 customer's motion today, not in September. It answered 252; the answer is 251. Gemma made the same choice
@@ -67,7 +84,12 @@ agent.
 ![Haiku trace: query_metrics grouped by customer__motion returns 252](docs/screenshots/langsmith-defect-trace.png)
 
 <details>
-<summary>More screenshots: LangSmith traces and experiments, BigQuery</summary>
+<summary>More screenshots: agent trajectories, LangSmith traces and experiments, BigQuery</summary>
+
+With dbt docs only, the agent reads that ARR is a balance and reports it at the end of the period instead of
+summing months, one of the planted traps:
+
+![Docs-level trajectory: ARR for the first half of 2026 reported as the June 30 balance](docs/screenshots/trajectory-h1-arr-docs.png)
 
 Gemma 4 26B, full context, same question and same wrong dimension:
 
