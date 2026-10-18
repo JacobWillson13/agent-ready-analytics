@@ -7,7 +7,7 @@ from datetime import date
 class Config:
     seed: int = 42
     start: date = date(2024, 1, 1)           # paid product GA window starts here
-    end: date = date(2026, 10, 14)           # recording day; also the dbt as_of_date
+    end: date = date(2026, 10, 14)           # snapshot date; also the dbt as_of_date
     scale: float = 1.0
 
     # funnel volumes (full scale)

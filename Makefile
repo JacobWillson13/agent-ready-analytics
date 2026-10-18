@@ -4,7 +4,7 @@ DATA  ?= data
 
 .PHONY: generate load ingest build recon golden evals evals-full agent lightdash all bench-smoke bench-pilot bench analyze
 
-generate:            ## synthetic company, through the recording date
+generate:            ## synthetic company, through the snapshot date
 	uv run python -m generator --scale $(SCALE) --out $(DATA)
 
 load:                ## parquet -> BigQuery raw_* and eval_truth

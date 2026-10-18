@@ -3,7 +3,7 @@ exposures:
     label: Lanternfly data agent
     type: application
     maturity: medium
-    url: https://github.com/YOUR_GITHUB_HANDLE/agent-ready-analytics/tree/main/agent
+    url: https://github.com/JacobWillson13/agent-ready-analytics/tree/main/agent
     description: LangGraph data agent. Reads endorsed marts, dbt docs, guides, and MetricFlow metrics.
     depends_on:
       - ref('dim_orgs')
