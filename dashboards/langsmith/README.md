@@ -12,13 +12,13 @@ Every chart filters on traces that carry this feedback. Aborted attempts that we
 
 ```
 source ~/.config/ara/env
-R="evals/results/phase2/runs.jsonl evals/results/phase2-v2/runs.jsonl"
-
-uv run python dashboards/langsmith/backfill_feedback.py $R            # dry run: expect 1920 matched, 0 missing
-uv run python dashboards/langsmith/backfill_feedback.py $R --apply
-uv run python dashboards/langsmith/push_dashboard.py --check $R       # LangSmith vs jsonl, chart by chart
-uv run python dashboards/langsmith/push_dashboard.py                  # create or replace the dashboard
+uv run python dashboards/langsmith/backfill_feedback.py            # dry run: expect 1920 matched, 0 missing
+uv run python dashboards/langsmith/backfill_feedback.py --apply
+uv run python dashboards/langsmith/push_dashboard.py --check       # LangSmith vs jsonl, chart by chart
+uv run python dashboards/langsmith/push_dashboard.py               # create or replace the dashboard
 ```
+
+Both scripts default to `evals/results/phase2/runs.jsonl` and `evals/results/phase2-v2/runs.jsonl`. To use other files, pass the paths as separate arguments. Don't pass them through a shell variable: zsh doesn't split a variable on spaces.
 
 Then open LangSmith, go to Monitoring, and open "Phase 2 benchmark: model x context". Set the time range to 2026-10-16 16:00 through 2026-10-18 03:00 UTC.
 
@@ -26,6 +26,6 @@ Then open LangSmith, go to Monitoring, and open "Phase 2 benchmark: model x cont
 
 - **Retention.** The SDK upgrades a trace to long-lived retention, which is billed, whenever feedback is added, unless told not to. The backfill turns that off. Add `--extend-retention` only if you want the traces kept past the 14-day base retention.
 - **Re-running is safe.** Feedback ids are deterministic, so existing feedback is skipped. `push_dashboard.py` deletes and recreates the dashboard with the same title.
-- **Changing a chart.** Edit `dashboard.json`, then rerun the push. Valid chart types are `line`, `bar`, `table`, `kpi`, `top-k`, `pie` and `text`.
+- **Changing a chart.** Edit `dashboard.json`, then rerun the push. Charts use LangSmith's V2 series format (`metric_definition` and `filter_definition`), because the API rejects V1 series. Supported metrics are listed in `metric_definition()` in `push_dashboard.py`. Valid chart types are `line`, `bar`, `table`, `kpi`, `top-k`, `pie` and `text`.
 - **Format retries.** `agent/graph.py` invokes a format retry separately, tagged only `format_retry`, so it lands as its own trace. The filters exclude those traces. The 7 affected rows keep their final score on the first trace, but that trace's latency and token count leave out the retry.
 - **Haiku cost** comes from LangSmith's model price map. If Haiku 5.5 isn't in that map, the cost tile shows $0, and `--check` will reveal it (the jsonl total is $2.84).

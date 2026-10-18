@@ -8,8 +8,7 @@ again replaces the dashboard with the same title.
   uv run python dashboards/langsmith/push_dashboard.py --dry-run
 
   # 2. preview every chart from LangSmith and compare it with the jsonl results
-  uv run python dashboards/langsmith/push_dashboard.py --check \
-      evals/results/phase2/runs.jsonl evals/results/phase2-v2/runs.jsonl
+  uv run python dashboards/langsmith/push_dashboard.py --check
 
   # 3. create (or replace) the dashboard
   uv run python dashboards/langsmith/push_dashboard.py
@@ -28,14 +27,9 @@ import sys
 from pathlib import Path
 
 SPEC = Path(__file__).with_name("dashboard.json")
-FEEDBACK_METRICS = {"feedback", "feedback_score_avg", "feedback_values"}
+DEFAULT_RUNS = ["evals/results/phase2/runs.jsonl", "evals/results/phase2-v2/runs.jsonl"]
 STRICT = {"run_count", "feedback_score_avg", "error_rate"}  # must match the jsonl
 CHART_TYPES = {"line", "bar", "table", "kpi", "top-k", "pie"}
-METRICS = {"run_count", "latency_p50", "latency_p99", "latency_avg", "first_token_p50", "first_token_p99",
-           "total_tokens", "prompt_tokens", "completion_tokens", "median_tokens", "completion_tokens_p50",
-           "prompt_tokens_p50", "tokens_p99", "completion_tokens_p99", "prompt_tokens_p99", "feedback",
-           "feedback_score_avg", "feedback_values", "total_cost", "prompt_cost", "completion_cost",
-           "error_rate", "streaming_rate", "cost_p50", "cost_p99"}
 
 
 # ---------- spec -> API payloads ----------
@@ -52,13 +46,29 @@ def series_filter(spec: dict, s: dict) -> str:
     return "and(" + ", ".join(parts) + ")"
 
 
+def metric_definition(spec: dict, metric: str) -> dict:
+    """Map the spec's metric names to LangSmith V2 metric definitions."""
+    if metric == "run_count":
+        return {"type": "count"}
+    if metric == "feedback_score_avg":
+        return {"type": "avg", "field": "feedback_score", "params": {"feedback_key": spec["feedback_key"]}}
+    if metric == "error_rate":
+        return {"type": "ratio", "numerator": {"type": "count", "filter": 'eq(status, "error")'},
+                "denominator": {"type": "count"}}
+    if metric == "total_cost":
+        return {"type": "sum", "field": "total_cost"}
+    if metric == "median_tokens":
+        return {"type": "percentile", "field": "total_tokens", "params": {"p": 0.5}}
+    if metric == "latency_p50":
+        return {"type": "percentile", "field": "latency_seconds", "params": {"p": 0.5}}
+    raise ValueError(f"unsupported metric {metric!r}; add it to metric_definition()")
+
+
 def series_payload(spec: dict, s: dict, project_id: str, sid: str | None = None) -> dict:
-    if s["metric"] not in METRICS:
-        raise ValueError(f"unknown metric {s['metric']!r} in series {s['name']!r}")
-    out = {"name": s["name"], "metric": s["metric"],
-           "filters": {"filter": series_filter(spec, s), "session": [project_id]}}
-    if s["metric"] in FEEDBACK_METRICS:
-        out["feedback_key"] = spec["feedback_key"]
+    out = {"name": s["name"],
+           "metric_definition": metric_definition(spec, s["metric"]),
+           "filter_definition": {"source_type": "tracing_project", "project_ids": [project_id],
+                                 "run_filter": series_filter(spec, s)}}
     if sid:
         out["id"] = sid
     return out
@@ -91,7 +101,7 @@ class Api:
     def call(self, method: str, path: str, **kw):
         r = self.s.request(method, self.base + path, timeout=60, **kw)
         if r.status_code >= 400:
-            sys.exit(f"{method} {path} -> {r.status_code}: {r.text[:800]}")
+            raise RuntimeError(f"{method} {path} -> {r.status_code}: {r.text[:800]}")
         return r.json() if r.content else None
 
     def project_id(self, name: str) -> str:
@@ -182,7 +192,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--spec", type=Path, default=SPEC)
     ap.add_argument("--dry-run", action="store_true", help="print payloads only")
-    ap.add_argument("--check", nargs="+", metavar="RUNS_JSONL", help="preview charts and compare with these jsonl files")
+    ap.add_argument("--check", nargs="*", metavar="RUNS_JSONL",
+                    help="preview charts and compare with the jsonl results (default: phase2 and phase2-v2)")
     args = ap.parse_args()
     spec = json.loads(args.spec.read_text())
 
@@ -194,8 +205,8 @@ def main() -> int:
 
     api = Api()
     pid = api.project_id(spec["project"])
-    if args.check:
-        return check(api, spec, pid, load_rows(args.check))
+    if args.check is not None:
+        return check(api, spec, pid, load_rows(args.check or DEFAULT_RUNS))
 
     for sec in api.call("GET", "/api/v1/charts/section", params={"title_contains": spec["title"], "limit": 100}):
         if sec["title"] == spec["title"]:
@@ -203,8 +214,13 @@ def main() -> int:
             print(f"deleted old dashboard {sec['id']}")
     sec = api.call("POST", "/api/v1/charts/section",
                    json={"title": spec["title"], "description": spec["description"]})
-    for i, chart in enumerate(spec["charts"]):
-        api.call("POST", "/api/v1/charts/create", json=chart_payload(spec, chart, i, pid, sec["id"]))
+    try:
+        for i, chart in enumerate(spec["charts"]):
+            api.call("POST", "/api/v1/charts/create", json=chart_payload(spec, chart, i, pid, sec["id"]))
+    except RuntimeError as e:
+        api.call("DELETE", f"/api/v1/charts/section/{sec['id']}")
+        print(f"failed on block {i} ({chart.get('title', 'text')}); removed the partial dashboard\n{e}")
+        return 1
     host = api.base.replace("api.smith", "smith").replace("/api", "")
     print(f"created dashboard {sec['id']} with {len(spec['charts'])} blocks")
     print(f"open: {host}/  ->  Monitoring  ->  {spec['title']}")
@@ -213,4 +229,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except RuntimeError as e:
+        sys.exit(str(e))
