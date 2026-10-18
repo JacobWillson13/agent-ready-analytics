@@ -58,8 +58,9 @@ statistical intervals, because Phase 1's 100% results could not separate the con
 
 ## What it looks like
 
-**Same question, with and without the context layer.** "What was net new ARR in Q3 2026?" The answer is
-$6.59M. With raw source tables, Haiku made 20 tool calls and built a careful, well-documented estimate from
+### Same question, with and without the context layer
+
+"What was net new ARR in Q3 2026?" The answer is $6.59M. With raw source tables, Haiku made 20 tool calls and built a careful, well-documented estimate from
 Salesforce bookings and Metronome invoices: $3.50M, about half the true value, because bookings and invoices
 are not ARR. With full context, the agent read two values of the governed `arr` metric and subtracted them in
 3 tool calls.
@@ -75,32 +76,40 @@ are not ARR. With full context, the agent read two values of the governed `arr` 
 </tr>
 </table>
 
-**The defect, in a trace.** Asked how many enterprise customers were paying at the end of September 2026,
-Haiku with full context grouped the governed `paying_customers` metric by `customer__motion`, which is each
-customer's motion today, not in September. It answered 252; the answer is 251. Gemma made the same choice
-with a filter instead of a group-by. The follow-up fix put each dimension's description in front of the
-agent.
+### The defect, in a trace
 
-![Haiku trace: query_metrics grouped by customer__motion returns 252](docs/screenshots/langsmith-defect-trace.png)
+Asked how many enterprise customers were paying at the end of September 2026, Haiku with full context
+grouped the governed `paying_customers` metric by `customer__motion`, which is each customer's motion today,
+not in September. It answered 252; the answer is 251. Gemma made the same choice with a filter instead of a
+group-by, which is why the report treats it as a context defect rather than a model quirk. The follow-up fix
+put each dimension's description in front of the agent.
 
-<details>
-<summary>More screenshots: agent trajectories, LangSmith traces and experiments, BigQuery</summary>
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/langsmith-defect-trace.png" alt="Haiku trace: query_metrics grouped by customer__motion returns 252"></td>
+<td width="50%"><img src="docs/screenshots/langsmith-defect-trace-gemma.png" alt="Gemma trace: query_metrics filtered on customer__motion returns 252"></td>
+</tr>
+<tr>
+<td>Haiku 5.5: groups by today's motion, 252</td>
+<td>Gemma 4 26B: filters on today's motion, 252</td>
+</tr>
+</table>
+
+### More agent behavior
 
 With dbt docs only, the agent reads that ARR is a balance and reports it at the end of the period instead of
 summing months, one of the planted traps:
 
 ![Docs-level trajectory: ARR for the first half of 2026 reported as the June 30 balance](docs/screenshots/trajectory-h1-arr-docs.png)
 
-Gemma 4 26B, full context, same question and same wrong dimension:
-
-![Gemma trace: query_metrics filtered on customer__motion returns 252](docs/screenshots/langsmith-defect-trace-gemma.png)
-
 Gemma with raw tables only: a long chain of SQL guesses, including filtering on deployment type when the
 question is about sales motion:
 
 ![Gemma raw-table trace with many run_sql calls](docs/screenshots/langsmith-gemma-raw.png)
 
-Benchmark traces in LangSmith, tagged by run, model, and context level:
+### Evaluation in LangSmith
+
+Every benchmark execution is traced and tagged by run, model, and context level:
 
 ![LangSmith trace list filtered to the Phase 2 run](docs/screenshots/langsmith-trace-list.png)
 
@@ -108,19 +117,19 @@ Phase 1 experiments on the 25 core questions (raw 0.76, docs and full 1.00):
 
 ![LangSmith experiment comparison](docs/screenshots/langsmith-experiments-core.png)
 
-BigQuery datasets, with dbt column descriptions persisted to the warehouse:
+### The warehouse in BigQuery
+
+Raw, staging, intermediate, and mart datasets, with dbt column descriptions persisted to BigQuery:
 
 ![BigQuery explorer and fct_arr_monthly schema](docs/screenshots/bigquery-explorer.png)
 
-ARR by motion from the endorsed mart (September 2026 totals $36.16M, matching the answer key):
+ARR by motion from the endorsed mart. September 2026 totals $36.16M, matching the answer key:
 
 ![BigQuery query results](docs/screenshots/bigquery-query.png)
 
-The answer key in `eval_truth` is readable by the CI account but not the agent account:
+The answer key in `eval_truth` is readable by the CI service account but not the agent's:
 
 ![eval_truth sharing permissions](docs/screenshots/bigquery-eval-truth-access.png)
-
-</details>
 
 ## The setup
 
