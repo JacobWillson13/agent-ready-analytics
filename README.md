@@ -1,6 +1,6 @@
 # agent-ready-analytics
 
-[![ci](https://github.com/JacobWillson13/agent-ready-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/JacobWillson13/agent-ready-analytics/actions/workflows/ci.yml)
+[![ci](https://github.com/JacobWillson13/agent-ready-analytics/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/JacobWillson13/agent-ready-analytics/actions/workflows/ci.yml)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![dbt 1.12](https://img.shields.io/badge/dbt-1.12-FF694B?logo=dbt&logoColor=white)
 ![MetricFlow](https://img.shields.io/badge/semantic%20layer-MetricFlow-FF694B)
