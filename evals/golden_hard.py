@@ -14,7 +14,7 @@ def build_hard(data, arr, daily, orgs, cust, r, add):
     H = "hard"
     m = lambda d: arr[arr.month_start == pd.Timestamp(d)]
     by_c = lambda df: df.groupby("customer_id").arr_usd.sum()
-    jun, sep, sep25, dec25 = m("2026-06-01"), m("2026-09-01"), m("2025-09-01"), m("2025-12-01")
+    jun, sep, sep25 = m("2026-06-01"), m("2026-09-01"), m("2025-09-01")
     region = cust.drop_duplicates("customer_id").set_index("customer_id")["region"]
     upgraded = set(cust[cust.upgraded_from_self_serve].customer_id)
 
