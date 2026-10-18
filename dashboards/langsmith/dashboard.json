@@ -222,7 +222,7 @@
       "items": [
         {
           "chart_type": "text",
-          "markdown": "**Notes.** Phase 2 charts count only root traces that carry the backfilled `correct` feedback, so accuracy and counts match `evals/results/*/runs.jsonl`. Tokens are means because LangSmith computes percentiles from coarse buckets; the report's medians are exact. Cost uses LangSmith's model price map. Latency is trace duration. Confidence intervals and per-trap results are in `docs/REPORT.md`."
+          "markdown": "**Notes.** Phase 2 charts count only root traces that carry the backfilled `correct` feedback, so accuracy and counts match `evals/results/*/runs.jsonl`. Tokens are means because LangSmith computes percentiles from coarse buckets; the report's medians are exact. LangSmith's Gemma token counts run about 2x the harness's; the ordering across context levels is the same. Cost uses LangSmith's model price map. Latency is trace duration. Confidence intervals and per-trap results are in `docs/REPORT.md`."
         }
       ]
     }
