@@ -131,8 +131,8 @@ question is about sales motion:
 ### Evaluation in LangSmith
 
 The benchmark dashboard is defined as code in [`dashboards/langsmith/`](dashboards/langsmith/). One script
-attaches each locally scored result to its trace as feedback; another builds the charts through the LangSmith
-API and checks every Phase 2 value against the results files.
+attaches each locally scored result to its trace as feedback and verifies every run carries it; another builds
+the charts through the LangSmith API.
 
 ![LangSmith dashboard: accuracy by model and context, outcomes, hard questions, and the context fix](docs/screenshots/langsmith-dashboard-accuracy.png)
 ![LangSmith dashboard: tokens, latency, and step-limit rate by context](docs/screenshots/langsmith-dashboard-efficiency.png)
@@ -230,7 +230,7 @@ make bench-smoke         # 3 questions per model and level; checks keys, tools, 
 make bench-pilot         # Haiku, full context, hard questions (about $0.12)
 make bench               # full benchmark; resumable, stops Haiku at $8
 make analyze             # tables in evals/results/phase2/summary.md, figures in docs/figures
-make dashboard           # scores -> LangSmith feedback, then build and check the LangSmith dashboard
+make dashboard           # scores -> LangSmith feedback, then build the LangSmith dashboard
 ```
 
 The benchmark checks credentials, the GCP project, and the Ollama model before it runs anything.
