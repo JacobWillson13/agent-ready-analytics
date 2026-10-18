@@ -2,7 +2,7 @@
 SCALE ?= 1.0
 DATA  ?= data
 
-.PHONY: generate load ingest build recon golden evals evals-full agent lightdash all bench-smoke bench-pilot bench analyze
+.PHONY: generate load ingest build recon golden evals evals-full agent lightdash all bench-smoke bench-pilot bench bench-v2 analyze
 
 generate:            ## synthetic company, through the snapshot date
 	uv run python -m generator --scale $(SCALE) --out $(DATA)
@@ -48,6 +48,13 @@ bench-pilot:         ## Haiku, full context, hard split, 1 rep: ceiling check an
 bench:               ## full run; resumable. Run the two models in separate terminals to overlap them.
 	uv run python evals/benchmark.py --run-id $(RUN) --models $(HAIKU) --repetitions 3 --cost-cap 8
 	uv run python evals/benchmark.py --run-id $(RUN) --models $(GEMMA) --repetitions 3
+
+bench-v2:            ## rerun docs and full after a context change; raw is reused because raw cannot see the context layer
+	mkdir -p evals/results/$(RUN)-v2
+	test -s evals/results/$(RUN)-v2/runs.jsonl || jq -c 'select(.level=="raw")' evals/results/$(RUN)/runs.jsonl > evals/results/$(RUN)-v2/runs.jsonl
+	uv run python evals/benchmark.py --run-id $(RUN)-v2 --models $(HAIKU) --levels docs full --repetitions 3 --cost-cap 8
+	uv run python evals/benchmark.py --run-id $(RUN)-v2 --models $(GEMMA) --levels docs full --repetitions 3
+	uv run python evals/compare_runs.py evals/results/$(RUN) evals/results/$(RUN)-v2
 
 analyze:             ## tables, mixed-effects model, and figures for a run
 	uv run python evals/analyze.py evals/results/$(RUN) --figures docs/figures
