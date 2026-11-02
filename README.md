@@ -16,6 +16,11 @@ accuracy, cost, and latency, and whether it lets a small model running on one co
 API model. It runs on BigQuery, dbt, MetricFlow, LangGraph, and LangSmith, with every answer scored in code
 against an answer key computed from simulation state.
 
+The project also runs the context improvement loop end to end. The eval finds defects in the context layer,
+a pull request fixes them, and CI measures whether the fix worked. A targeted fix to dimension descriptions
+took the affected questions from 2 of 12 runs correct to 11 of 12. A fix for contract ARR did not work, and
+the report explains why.
+
 > **All company data is synthetic.** Lanternfly Labs is a fictional developer-tools SaaS company generated
 > by a seeded simulation in this repo. The PyPI download and GitHub release data is real.
 
@@ -55,6 +60,9 @@ and failure analysis: **[docs/REPORT.md](docs/REPORT.md)**.
    When it finished with full context, it was right 94% of the time.
 5. **Context is cheaper.** With full context Haiku used 63% fewer input tokens and 59% less time than with raw
    tables. The full 576-run Haiku benchmark cost $2.84.
+6. **One run is not enough to judge a context change for a local model.** Editing four column descriptions
+   changed Gemma's answers on 25 of 64 questions, 13 up and 12 down, so a context change has to be judged
+   across many questions with per-question comparisons, as `evals/compare_runs.py` does.
 
 ![Accuracy against latency and tokens](docs/figures/fig2_accuracy_vs_cost.png)
 
@@ -250,11 +258,19 @@ Two service accounts, least privilege:
 CI holds no service account keys. GitHub Actions authenticates through Workload Identity Federation, limited
 to this repository; setup is in [docs/WORKLOAD_IDENTITY.md](docs/WORKLOAD_IDENTITY.md).
 
+## What's next
+
+The fixes so far were written by hand after reading failing traces. The next step automates that. A script
+pulls failed runs from LangSmith, an agent drafts a change to a guide, dbt description, or semantic model, and
+it opens a pull request that the existing CI eval scores before anyone reviews it. The first target is the
+contract ARR defect, where the report's likely fix, publishing contracts as an endorsed mart or governed
+metric, has not been tested yet.
+
 ## Background
 
 The architecture follows patterns data teams have published about running agents on their warehouse,
 including LangChain's write-up
-[How we built LangChain's agent-first data stack](https://langchain.com/blog/agent-data-stack) and Hex's
+[How we built LangChain's agent-first data stack](https://www.langchain.com/blog/agent-data-stack) and Hex's
 [LangChain customer story](https://hex.tech/customers/langchain/): rich dbt definitions, a semantic layer,
 written business guides, endorsement signals, and observability feeding a context improvement loop. This
 project builds the evaluation that loop needs and measures it across models. Lanternfly Labs is fictional,
